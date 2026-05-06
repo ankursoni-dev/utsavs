@@ -1,26 +1,131 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Utsavs design system — Tailwind 4 token map.
+ * Source of truth: .claude/context/modules/design-system.md
+ *
+ * No dark mode. Editorial, jewel-toned, restrained.
+ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ── Fonts (CSS variables are set by next/font in layout.tsx) */
+  --font-display: var(--font-marcellus), 'Marcellus', serif;
+  --font-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
+
+  /* ── Base (operational palette) */
+  --color-bg: #f7f5f2;
+  --color-bg-alt: #fbf9f6;
+  --color-surface: #ffffff;
+  --color-text: #171717;
+  --color-text-muted: #6b7280;
+  --color-text-subtle: #9ca3af;
+  --color-border: #e7e5e4;
+  --color-border-strong: #d6d3d1;
+  --color-hover: #f5f4f1;
+
+  /* ── Jewel tones */
+  --color-emerald: #0f4c3a;
+  --color-emerald-lt: #d4e8df;
+  --color-champagne: #c8a96b;
+  --color-champagne-lt: #f0e6d2;
+  --color-navy: #1b1f3b;
+  --color-navy-lt: #3a3f6b;
+  --color-violet: #7c3aed;
+  --color-maroon: #5b1a2b;
+  --color-brass: #a88b4a;
+  --color-peach: #f4c4a0;
+  --color-rose: #e8b8b8;
+  --color-beige: #e8dfd0;
+  --color-charcoal: #1a1a1a;
+
+  /* ── Semantic */
+  --color-success: #0f766e;
+  --color-success-bg: #d1fae5;
+  --color-warning: #b45309;
+  --color-warning-bg: #fef3c7;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fee2e2;
+  --color-info: #1e40af;
+  --color-info-bg: #dbeaff;
+
+  /* ── Health (ops) */
+  --color-healthy: #0f766e;
+  --color-caution: #d97706;
+  --color-critical: #b91c1c;
+  --color-neutral: #6b7280;
+
+  /* ── Shadow scale */
+  --shadow-xs: 0 1px 2px rgba(23, 23, 23, 0.04);
+  --shadow-sm: 0 1px 3px rgba(23, 23, 23, 0.06), 0 1px 2px rgba(23, 23, 23, 0.03);
+  --shadow-md: 0 4px 12px -2px rgba(23, 23, 23, 0.08), 0 2px 6px -2px rgba(23, 23, 23, 0.04);
+  --shadow-lg: 0 12px 28px -6px rgba(23, 23, 23, 0.12), 0 4px 10px -4px rgba(23, 23, 23, 0.06);
+  --shadow-xl: 0 24px 48px -12px rgba(23, 23, 23, 0.18), 0 8px 16px -8px rgba(23, 23, 23, 0.08);
+
+  /* ── Motion easings */
+  --ease-fast: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-cinematic: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ── Motion durations */
+  --duration-fast: 120ms;
+  --duration-med: 220ms;
+  --duration-slow: 420ms;
+  --duration-cinema: 720ms;
+
+  /* ── Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/*
+ * Plain-CSS aliases for non-Tailwind consumers (ThemeProvider injection,
+ * inline styles in components). These mirror the @theme tokens above.
+ */
+:root {
+  --shadow-xs: 0 1px 2px rgba(23, 23, 23, 0.04);
+  --shadow-sm: 0 1px 3px rgba(23, 23, 23, 0.06), 0 1px 2px rgba(23, 23, 23, 0.03);
+  --shadow-md: 0 4px 12px -2px rgba(23, 23, 23, 0.08), 0 2px 6px -2px rgba(23, 23, 23, 0.04);
+  --shadow-lg: 0 12px 28px -6px rgba(23, 23, 23, 0.12), 0 4px 10px -4px rgba(23, 23, 23, 0.06);
+  --shadow-xl: 0 24px 48px -12px rgba(23, 23, 23, 0.18), 0 8px 16px -8px rgba(23, 23, 23, 0.08);
+
+  --ease-fast: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-cinematic: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --duration-fast: 120ms;
+  --duration-med: 220ms;
+  --duration-slow: 420ms;
+  --duration-cinema: 720ms;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg, #f7f5f2);
+  color: var(--color-text, #171717);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Letter-spacing convention for display headings (Marcellus). */
+.font-display {
+  letter-spacing: -0.02em;
+}
+
+/* Eyebrow utility — small caps label used across the design system. */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }

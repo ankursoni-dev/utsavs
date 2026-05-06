@@ -25,7 +25,7 @@
 > The curator adds an entry here for each module under `modules/`.
 > Format: `- [name](modules/<name>.md) — one-line purpose`
 
-_(no modules documented yet — the curator will populate this as features ship)_
+- [web-shell](modules/web-shell.md) — Next.js 16 shell: Docker dev, design tokens, ThemeProvider, UI primitives, route groups
 
 ## Architectural decisions
 
