@@ -1,0 +1,15 @@
+node_modules
+dist
+.next
+.env
+coverage
+turbo
+# NestJS Agent Pipeline
+.repowise/
+.claude/openrouter-status.json
+.claude/context/git-hotspots.json
+.claude/audits/
+
+
+# repowise API keys (local)
+.repowise/.env
