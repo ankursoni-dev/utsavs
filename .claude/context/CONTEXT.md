@@ -6,11 +6,12 @@
 
 ## Project at a glance
 
-- **Type**: NestJS backend service
-- **Runtime**: Node.js (LTS) + TypeScript
-- **Framework**: NestJS v11.x (verify in `package.json`)
-
-> Replace this section as the project takes shape — add the real DB, ORM, queue, auth strategy, deployment target, etc.
+- **Type**: Monorepo (pnpm workspace + Turborepo)
+- **Stack**: NestJS v11 (apps/api/) + Next.js v16.2 (apps/web/)
+- **ORM**: Prisma 7 with PostgreSQL 16
+- **Auth**: Phone OTP + JWT (planned; see ADR-001)
+- **Infrastructure**: Docker Compose (postgres, redis, api, web services)
+- **CI/CD**: TypeScript strict mode, Prettier, ESLint, Swagger docs at `/api/docs`
 
 ## Conventions in this codebase
 
@@ -25,6 +26,7 @@
 > The curator adds an entry here for each module under `modules/`.
 > Format: `- [name](modules/<name>.md) — one-line purpose`
 
+- [data-model](modules/data-model.md) — Prisma 7 schema: 16 models, 14 enums, money-in-paise convention, PrismaService global injection
 - [web-shell](modules/web-shell.md) — Next.js 16 shell: Docker dev, design tokens, ThemeProvider, UI primitives, route groups
 
 ## Architectural decisions

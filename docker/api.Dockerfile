@@ -39,5 +39,6 @@ FROM installer AS dev
 RUN pnpm add -g @nestjs/cli
 WORKDIR /app
 COPY --from=pruner /app/out/full/ .
+# Generate Prisma Client before starting (schema is volume-mounted at runtime).
 EXPOSE 3001
-CMD ["pnpm", "--filter", "api", "dev"]
+CMD ["sh", "-c", "cd apps/api && npx prisma generate && cd /app && pnpm --filter api dev"]

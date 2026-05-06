@@ -1,95 +1,68 @@
-# Data Model — Utsavs v3
+# Data Model — Prisma 7 ORM
 
-> Derived from: `utsavs-design/js/v3/Data.jsx` and Product Execution Plan
+**Purpose:** PostgreSQL schema with 16 models and 14 enums, managed via Prisma 7. Adapter pattern (`@prisma/adapter-pg`) with driver-based connection pooling. Configuration via `prisma.config.ts`, database URL from environment.
+
+## Prisma Setup
+
+- **Version:** 7 (not 6 — adapter-based architecture)
+- **Config file:** `prisma.config.ts` (Prisma 7 convention; datasource URL external)
+- **Schema:** `prisma/schema.prisma`
+- **Adapter:** `@prisma/adapter-pg` (required for Prisma 7)
+- **Connection:** `new PrismaPg({ connectionString: process.env.DATABASE_URL })`
+- **Service:** `PrismaService` extends `PrismaClient`, lifecycle hooks (`OnModuleInit`, `OnModuleDestroy`), global module
+- **Injection:** `constructor(private prisma: PrismaService)` in NestJS services
+- **Migrations:** `docker compose exec api npx prisma migrate dev --name <name>`
+- **Seed:** `docker compose exec api npx prisma db seed` (runs `prisma/seed.ts`)
 
 ## Core Entities
 
-### User
-- Phone-first auth (OTP via MSG91/Twilio)
-- Roles: `guest`, `host`, `organizer` (role per event, not global)
-- Fields: id, phone, name, email?, avatar_url?, created_at
+| Model | Key Fields | Relations |
+|---|---|---|
+| **User** | id (cuid), phone (unique), name, email, avatarUrl, createdAt, updatedAt | EventMembership[], events (created), guests, memberships |
+| **Event** | id, slug (unique), coupleName, brideName, groomName, weddingDate, venue, city, theme (enum), story, hashtag, state (enum), createdById | createdBy (User), memberships, subEvents, guests, rsvps, shaguns, vendors, budgetItems, tasks, broadcasts, activities |
+| **EventMembership** | id, userId, eventId, role (enum: HOST/ORGANIZER/GUEST), permissions (JSON), joinedAt | user, event — composite unique (userId, eventId) |
+| **SubEvent** | id, eventId, name, date, time, venue, dressCode, icon, sortOrder | event, deliverables — index on (eventId, sortOrder) |
+| **Guest** | id, eventId, userId?, name, phone, side (enum: BRIDE/GROOM), tags[] (array), dietary (enum or null) | event, user, rsvp, shaguns — composite unique (eventId, phone) |
+| **Rsvp** | id, guestId (unique), eventId, status (enum), plusOnes, respondedAt | guest, event — index on (eventId, status) |
+| **ShagunTransaction** | id, eventId, guestId, amountPaise (int, paise), method (enum), razorpayPaymentId?, razorpayTransferId?, status (enum), settledAt, createdAt | event, guest — index on (eventId, status) |
+| **Vendor** | id, eventId, name, type, status (enum), totalAmount, paidAmount, rating, lastContactAt, riskLevel (enum) | event, deliverables, budgetItems — index on (eventId, status) |
+| **VendorDeliverable** | id, vendorId, description, subEventId?, completed | vendor, subEvent |
+| **BudgetItem** | id, eventId, category, allocated, spent, vendorId? | event, vendor — index on (eventId) |
+| **Task** | id, eventId, title, dueDate, status (enum), assigneeName, priority (enum) | event — index on (eventId, status) |
+| **Broadcast** | id, eventId, title, body, channel (enum), sentCount, openedCount, createdAt | event — index on (eventId, createdAt) |
+| **Activity** | id, eventId, actorType (enum), actorId?, action, metadata (JSON), createdAt | event — index on (eventId, createdAt) |
 
-### Event
-- Central entity. One couple, multiple sub-events.
-- Fields: id, slug, couple_name, bride_name, groom_name, wedding_date, venue, city, theme (enum: 6 themes), story, hashtag, state (before/during/after), created_by (host user_id)
-- Stats (computed/cached): total_guests, confirmed, pending, declined, maybe, shagun_total, photos_uploaded, budget_total, budget_spent, tasks_total, tasks_done
+## Money Convention
 
-### SubEvent
-- Belongs to Event. Mehendi, Sangeet, Haldi, Wedding, Reception, custom.
-- Fields: id, event_id, name, date, time, venue, dress_code, icon, sort_order
+All monetary fields are **integers in paise** (not rupees, not float):
+- `amountPaise` (ShagunTransaction)
+- `totalAmount`, `paidAmount` (Vendor, BudgetItem)
+- `allocated`, `spent` (BudgetItem)
 
-### Guest
-- Belongs to Event. Invited person (may or may not be a User).
-- Fields: id, event_id, user_id?, name, phone, side (Bride/Groom), tags[] (VIP, Family, Friend, Colleague, College...), dietary (Veg/Non-Veg/Jain/null)
-- RSVP is per-guest (not per sub-event in v1)
+Example: ₹11,000 = 1,100,000 paise.
 
-### RSVP
-- Fields: id, guest_id, event_id, status (Confirmed/Pending/Declined/Maybe), plus_ones (int), responded_at
-- v2 scope: per-sub-event RSVP, meal preference per sub-event
+## Enums
 
-### ShagunTransaction
-- Fields: id, event_id, guest_id, amount (paise), method (UPI/Card/NetBanking/Cash), razorpay_payment_id?, razorpay_transfer_id?, status (initiated/captured/settled/failed), created_at, settled_at
-- Settlement: Razorpay Route auto-settles to host's linked bank account(s)
-- UPI = zero MDR (P2M). Card/NetBanking = convenience fee passed to guest.
+| Enum | Values |
+|---|---|
+| **EventTheme** | ROYAL_IVORY, MODERN_EMERALD, MIDNIGHT_SANGEET, MINIMAL_LUXURY, FLORAL_SUNSET, TEMPLE_CLASSIC |
+| **EventState** | BEFORE, DURING, AFTER |
+| **MemberRole** | HOST, ORGANIZER, GUEST |
+| **GuestSide** | BRIDE, GROOM |
+| **DietaryPreference** | VEG, NON_VEG, JAIN, VEGAN |
+| **RsvpStatus** | CONFIRMED, PENDING, DECLINED, MAYBE |
+| **PaymentMethod** | UPI, CARD, NET_BANKING, CASH |
+| **TransactionStatus** | INITIATED, CAPTURED, SETTLED, FAILED |
+| **VendorStatus** | CONFIRMED, PENDING, REJECTED |
+| **RiskLevel** | LOW, MEDIUM, HIGH |
+| **TaskStatus** | PENDING, DONE, OVERDUE |
+| **Priority** | HIGH, MEDIUM, LOW |
+| **BroadcastChannel** | WHATSAPP, SMS, PUSH |
+| **ActorType** | GUEST, HOST, SYSTEM |
 
-### Vendor
-- Fields: id, event_id, name, type (Photographer/Decorator/Caterer/DJ/Mehendi/Florist/...), status (Confirmed/Pending/Rejected), total_amount, paid_amount, rating, last_contact_at, risk_level (low/medium/high)
-- Has many Deliverables: { vendor_id, description, sub_event_id?, completed }
+## Gotchas and Notes
 
-### BudgetItem
-- Fields: id, event_id, category (Venue/Catering/Decoration/Photography/Outfits/Music/Misc), allocated, spent, vendor_id?
-
-### Task
-- Fields: id, event_id, title, due_date, status (pending/done/overdue), assignee_name, priority (high/medium/low)
-
-### Broadcast
-- Fields: id, event_id, title, body, sent_count, opened_count, channel (WhatsApp/SMS/Push), created_at
-
-### Activity (event log)
-- Fields: id, event_id, actor_type (guest/host/system), actor_id?, action, metadata (JSON), created_at
-- Examples: RSVP confirmed, shagun received, photo uploaded, vendor responded, task completed
-
-## Relationships
-
-```
-User 1──M EventMembership M──1 Event
-Event 1──M SubEvent
-Event 1──M Guest
-Guest 1──1 RSVP (v1, 1──M in v2)
-Guest 1──M ShagunTransaction
-Event 1──M Vendor
-Vendor 1──M Deliverable
-Event 1──M BudgetItem
-Event 1──M Task
-Event 1──M Broadcast
-Event 1──M Activity
-```
-
-EventMembership: { user_id, event_id, role: host|organizer|guest, permissions: JSON }
-
-## Multi-Event Support (Organizer)
-
-An organizer (wedding planner) manages multiple events. The command center shows:
-- Event list with health status (healthy/caution/critical)
-- Aggregate alerts across events
-- Per-event: days_left, rsvp_pct, budget_pct, vendor_count
-
-Health is computed: critical if (days_left < 14 AND pending > 20%) OR budget > 95% OR any vendor risk=high.
-
-## Shagun Payment Architecture
-
-- Guest pays via Razorpay Checkout (embedded in guest page)
-- Payment goes to Utsavs' Razorpay merchant account (P2M UPI = zero MDR)
-- Razorpay Route auto-transfers to host's linked bank account(s)
-- Host can link multiple bank accounts (split across family members)
-- Convenience fee on card/net banking passed to guest (like BookMyShow)
-- Server-confirmed via Razorpay webhooks (not client-side redirect)
-
-## Data Scale Assumptions (v1)
-
-- Events: 100-500 active
-- Guests per event: 200-800
-- Sub-events per event: 3-7
-- Vendors per event: 8-20
-- Shagun transactions per event: 50-300
-- Photos per event: 500-5000
+- **Cascade deletes:** EventMembership, SubEvent, Guest, Rsvp, ShagunTransaction, Vendor, BudgetItem, Task, Broadcast, Activity all have `onDelete: Cascade` from Event. Deleting an event nukes all dependents.
+- **Composite indexes:** EventMembership (userId, eventId), SubEvent (eventId, sortOrder), Guest (eventId, phone), Rsvp (eventId, status), ShagunTransaction (eventId, status), Vendor (eventId, status), BudgetItem (eventId), Task (eventId, status), Broadcast (eventId, createdAt), Activity (eventId, createdAt).
+- **Optional fields:** avatarUrl, email (User); story, hashtag (Event); dressCode, icon (SubEvent); userId, dietary (Guest); subEventId (VendorDeliverable); rating, lastContactAt, riskLevel (Vendor); vendorId (BudgetItem); dueDate, assigneeName (Task); actorId, metadata (Activity).
+- **No explicit timestamps on all models:** only User, Event, Guest (createdAt), ShagunTransaction, Vendor, Task, Broadcast, Activity have timestamps. SubEvent, EventMembership, Rsvp, BudgetItem do not.

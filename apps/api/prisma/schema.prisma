@@ -1,0 +1,327 @@
+// Utsavs — Prisma schema
+// India-first Event Operating System. See .claude/context/modules/data-model.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+enum EventTheme {
+  ROYAL_IVORY
+  MODERN_EMERALD
+  MIDNIGHT_SANGEET
+  MINIMAL_LUXURY
+  FLORAL_SUNSET
+  TEMPLE_CLASSIC
+}
+
+enum EventState {
+  BEFORE
+  DURING
+  AFTER
+}
+
+enum MemberRole {
+  HOST
+  ORGANIZER
+  GUEST
+}
+
+enum GuestSide {
+  BRIDE
+  GROOM
+}
+
+enum DietaryPreference {
+  VEG
+  NON_VEG
+  JAIN
+  VEGAN
+}
+
+enum RsvpStatus {
+  CONFIRMED
+  PENDING
+  DECLINED
+  MAYBE
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NET_BANKING
+  CASH
+}
+
+enum TransactionStatus {
+  INITIATED
+  CAPTURED
+  SETTLED
+  FAILED
+}
+
+enum VendorStatus {
+  CONFIRMED
+  PENDING
+  REJECTED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+  OVERDUE
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum BroadcastChannel {
+  WHATSAPP
+  SMS
+  PUSH
+}
+
+enum ActorType {
+  GUEST
+  HOST
+  SYSTEM
+}
+
+// =============================================================================
+// Models
+// =============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  email     String?  @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events      Event[]            @relation("EventCreatedBy")
+  memberships EventMembership[]
+  guests      Guest[]
+}
+
+model Event {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  coupleName  String
+  brideName   String
+  groomName   String
+  weddingDate DateTime
+  venue       String
+  city        String
+  theme       EventTheme @default(ROYAL_IVORY)
+  story       String?
+  hashtag     String?
+  state       EventState @default(BEFORE)
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  createdBy   User                 @relation("EventCreatedBy", fields: [createdById], references: [id])
+  memberships EventMembership[]
+  subEvents   SubEvent[]
+  guests      Guest[]
+  rsvps       Rsvp[]
+  shaguns     ShagunTransaction[]
+  vendors     Vendor[]
+  budgetItems BudgetItem[]
+  tasks       Task[]
+  broadcasts  Broadcast[]
+  activities  Activity[]
+}
+
+model EventMembership {
+  id          String     @id @default(cuid())
+  userId      String
+  eventId     String
+  role        MemberRole
+  permissions Json?
+  joinedAt    DateTime   @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+}
+
+model SubEvent {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  date      DateTime
+  time      String
+  venue     String
+  dressCode String?
+  icon      String?
+  sortOrder Int      @default(0)
+
+  event         Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  deliverables  VendorDeliverable[]
+
+  @@index([eventId, sortOrder])
+}
+
+model Guest {
+  id        String             @id @default(cuid())
+  eventId   String
+  userId    String?
+  name      String
+  phone     String
+  side      GuestSide
+  tags      String[]
+  dietary   DietaryPreference?
+  createdAt DateTime           @default(now())
+
+  event   Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User?                @relation(fields: [userId], references: [id])
+  rsvp    Rsvp?
+  shaguns ShagunTransaction[]
+
+  @@unique([eventId, phone])
+  @@index([eventId, side])
+}
+
+model Rsvp {
+  id          String     @id @default(cuid())
+  guestId     String     @unique
+  eventId     String
+  status      RsvpStatus @default(PENDING)
+  plusOnes    Int        @default(0)
+  respondedAt DateTime?
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, status])
+}
+
+model ShagunTransaction {
+  id                String            @id @default(cuid())
+  eventId           String
+  guestId           String
+  amountPaise       Int
+  method            PaymentMethod
+  razorpayPaymentId String?           @unique
+  razorpayTransferId String?
+  status            TransactionStatus @default(INITIATED)
+  settledAt         DateTime?
+  createdAt         DateTime          @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, status])
+}
+
+model Vendor {
+  id            String       @id @default(cuid())
+  eventId       String
+  name          String
+  type          String
+  status        VendorStatus @default(PENDING)
+  totalAmount   Int
+  paidAmount    Int          @default(0)
+  rating        Float?
+  lastContactAt DateTime?
+  riskLevel     RiskLevel    @default(LOW)
+  createdAt     DateTime     @default(now())
+
+  event        Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  deliverables VendorDeliverable[]
+  budgetItems  BudgetItem[]
+
+  @@index([eventId, status])
+}
+
+model VendorDeliverable {
+  id          String   @id @default(cuid())
+  vendorId    String
+  description String
+  subEventId  String?
+  completed   Boolean  @default(false)
+
+  vendor   Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  subEvent SubEvent? @relation(fields: [subEventId], references: [id])
+
+  @@index([vendorId])
+}
+
+model BudgetItem {
+  id        String  @id @default(cuid())
+  eventId   String
+  category  String
+  allocated Int
+  spent     Int     @default(0)
+  vendorId  String?
+
+  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+
+  @@index([eventId])
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  eventId      String
+  title        String
+  dueDate      DateTime?
+  status       TaskStatus @default(PENDING)
+  assigneeName String?
+  priority     Priority   @default(MEDIUM)
+  createdAt    DateTime   @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, status])
+}
+
+model Broadcast {
+  id          String           @id @default(cuid())
+  eventId     String
+  title       String
+  body        String
+  channel     BroadcastChannel
+  sentCount   Int              @default(0)
+  openedCount Int              @default(0)
+  createdAt   DateTime         @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, createdAt])
+}
+
+model Activity {
+  id        String    @id @default(cuid())
+  eventId   String
+  actorType ActorType
+  actorId   String?
+  action    String
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, createdAt])
+}
