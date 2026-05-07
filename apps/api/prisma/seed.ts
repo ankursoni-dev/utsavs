@@ -12,7 +12,7 @@ import {
   DietaryPreference,
   EventState,
   EventTheme,
-  GuestSide,
+  EventType,
   MemberRole,
   PaymentMethod,
   PrismaClient,
@@ -61,20 +61,28 @@ async function main(): Promise<void> {
   const event = await prisma.event.create({
     data: {
       slug: EVENT_SLUG,
-      coupleName: 'Aarav & Priya',
-      brideName: 'Priya Sharma',
-      groomName: 'Aarav Sharma',
-      weddingDate,
+      name: 'Aarav & Priya Wedding',
+      type: EventType.WEDDING,
+      date: weddingDate,
       venue: 'Taj Palace, ITC Maurya Lawns',
       city: 'New Delhi',
       theme: EventTheme.ROYAL_IVORY,
-      story:
-        'Two families, one celebration. Join us as Aarav and Priya begin their forever — across mehendi, sangeet, haldi, the wedding, and a grand reception.',
-      hashtag: '#AaravWedsPriya2026',
       state: EventState.BEFORE,
       createdById: aarav.id,
       memberships: {
         create: { userId: aarav.id, role: MemberRole.HOST },
+      },
+      weddingDetail: {
+        create: {
+          partner1Name: 'Priya Sharma',
+          partner1Label: 'Bride',
+          partner2Name: 'Aarav Sharma',
+          partner2Label: 'Groom',
+          coupleName: 'Aarav & Priya',
+          story:
+            'Two families, one celebration. Join us as Aarav and Priya begin their forever — across mehendi, sangeet, haldi, the wedding, and a grand reception.',
+          hashtag: '#AaravWedsPriya2026',
+        },
       },
     },
   });
@@ -145,70 +153,70 @@ async function main(): Promise<void> {
     {
       name: 'Rohan Sharma',
       phone: '+919999100001',
-      side: GuestSide.GROOM,
+      group: 'Groom',
       tags: ['Family', 'VIP'],
       dietary: DietaryPreference.VEG,
     },
     {
       name: 'Meera Sharma',
       phone: '+919999100002',
-      side: GuestSide.GROOM,
+      group: 'Groom',
       tags: ['Family'],
       dietary: DietaryPreference.VEG,
     },
     {
       name: 'Karan Mehta',
       phone: '+919999100003',
-      side: GuestSide.GROOM,
+      group: 'Groom',
       tags: ['College', 'Friend'],
       dietary: DietaryPreference.NON_VEG,
     },
     {
       name: 'Neha Kapoor',
       phone: '+919999100004',
-      side: GuestSide.GROOM,
+      group: 'Groom',
       tags: ['Colleague'],
       dietary: DietaryPreference.JAIN,
     },
     {
       name: 'Vikram Singh',
       phone: '+919999100005',
-      side: GuestSide.GROOM,
+      group: 'Groom',
       tags: ['Friend'],
       dietary: DietaryPreference.NON_VEG,
     },
     {
       name: 'Anjali Sharma',
       phone: '+919999200001',
-      side: GuestSide.BRIDE,
+      group: 'Bride',
       tags: ['Family', 'VIP'],
       dietary: DietaryPreference.VEG,
     },
     {
       name: 'Ravi Sharma',
       phone: '+919999200002',
-      side: GuestSide.BRIDE,
+      group: 'Bride',
       tags: ['Family'],
       dietary: DietaryPreference.VEG,
     },
     {
       name: 'Sneha Iyer',
       phone: '+919999200003',
-      side: GuestSide.BRIDE,
+      group: 'Bride',
       tags: ['College', 'Friend'],
       dietary: DietaryPreference.VEGAN,
     },
     {
       name: 'Aditi Rao',
       phone: '+919999200004',
-      side: GuestSide.BRIDE,
+      group: 'Bride',
       tags: ['Friend'],
       dietary: DietaryPreference.NON_VEG,
     },
     {
       name: 'Pooja Nair',
       phone: '+919999200005',
-      side: GuestSide.BRIDE,
+      group: 'Bride',
       tags: ['Colleague'],
       dietary: DietaryPreference.VEG,
     },
@@ -252,15 +260,16 @@ async function main(): Promise<void> {
     });
   }
 
-  // Sample shagun (one captured) for a confirmed guest
-  await prisma.shagunTransaction.create({
+  // Sample contribution (one captured) for a confirmed guest
+  await prisma.contribution.create({
     data: {
       eventId: event.id,
       guestId: guests[0].id,
       amountPaise: 1100000, // ₹11,000
       method: PaymentMethod.UPI,
+      label: 'Shagun',
       status: TransactionStatus.CAPTURED,
-      razorpayPaymentId: 'pay_DEMO0000000001',
+      paymentId: 'pay_DEMO0000000001',
     },
   });
 

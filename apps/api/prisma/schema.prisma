@@ -13,6 +13,14 @@ datasource db {
 // Enums
 // =============================================================================
 
+enum EventType {
+  WEDDING
+  BIRTHDAY
+  ANNIVERSARY
+  RETIREMENT
+  CUSTOM
+}
+
 enum EventTheme {
   ROYAL_IVORY
   MODERN_EMERALD
@@ -32,11 +40,6 @@ enum MemberRole {
   HOST
   ORGANIZER
   GUEST
-}
-
-enum GuestSide {
-  BRIDE
-  GROOM
 }
 
 enum DietaryPreference {
@@ -124,31 +127,43 @@ model User {
 model Event {
   id          String     @id @default(cuid())
   slug        String     @unique
-  coupleName  String
-  brideName   String
-  groomName   String
-  weddingDate DateTime
+  name        String
+  type        EventType  @default(WEDDING)
+  date        DateTime
   venue       String
   city        String
   theme       EventTheme @default(ROYAL_IVORY)
-  story       String?
-  hashtag     String?
   state       EventState @default(BEFORE)
   createdById String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  createdBy   User                 @relation("EventCreatedBy", fields: [createdById], references: [id])
-  memberships EventMembership[]
-  subEvents   SubEvent[]
-  guests      Guest[]
-  rsvps       Rsvp[]
-  shaguns     ShagunTransaction[]
-  vendors     Vendor[]
-  budgetItems BudgetItem[]
-  tasks       Task[]
-  broadcasts  Broadcast[]
-  activities  Activity[]
+  createdBy     User              @relation("EventCreatedBy", fields: [createdById], references: [id])
+  weddingDetail WeddingDetail?
+  memberships   EventMembership[]
+  subEvents     SubEvent[]
+  guests        Guest[]
+  rsvps         Rsvp[]
+  contributions Contribution[]
+  vendors       Vendor[]
+  budgetItems   BudgetItem[]
+  tasks         Task[]
+  broadcasts    Broadcast[]
+  activities    Activity[]
+}
+
+model WeddingDetail {
+  id            String  @id @default(cuid())
+  eventId       String  @unique
+  partner1Name  String
+  partner1Label String? @default("Bride")
+  partner2Name  String
+  partner2Label String? @default("Groom")
+  coupleName    String?
+  story         String?
+  hashtag       String?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model EventMembership {
@@ -189,18 +204,18 @@ model Guest {
   userId    String?
   name      String
   phone     String
-  side      GuestSide
+  group     String?
   tags      String[]
   dietary   DietaryPreference?
   createdAt DateTime           @default(now())
 
-  event   Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user    User?                @relation(fields: [userId], references: [id])
-  rsvp    Rsvp?
-  shaguns ShagunTransaction[]
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id])
+  rsvp          Rsvp?
+  contributions Contribution[]
 
   @@unique([eventId, phone])
-  @@index([eventId, side])
+  @@index([eventId, group])
 }
 
 model Rsvp {
@@ -217,17 +232,18 @@ model Rsvp {
   @@index([eventId, status])
 }
 
-model ShagunTransaction {
-  id                String            @id @default(cuid())
-  eventId           String
-  guestId           String
-  amountPaise       Int
-  method            PaymentMethod
-  razorpayPaymentId String?           @unique
-  razorpayTransferId String?
-  status            TransactionStatus @default(INITIATED)
-  settledAt         DateTime?
-  createdAt         DateTime          @default(now())
+model Contribution {
+  id          String            @id @default(cuid())
+  eventId     String
+  guestId     String
+  amountPaise Int
+  method      PaymentMethod
+  label       String?
+  paymentId   String?           @unique
+  transferId  String?
+  status      TransactionStatus @default(INITIATED)
+  settledAt   DateTime?
+  createdAt   DateTime          @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
