@@ -160,6 +160,33 @@ utsavs/
 - Photo uploads: max 10MB, EXIF stripped, thumbnails generated async
 - CORS: guest pages on `*.utsavs.in`, API on `api.utsavs.in`
 
+## ADR-009: Config-driven OTP providers (phased)
+
+**M0 (now):** OtpProvider interface + factory. Credentials from env vars (MSG91_AUTH_KEY). Factory picks DevOtpProvider (console log fallback) vs Msg91OtpProvider based on env var presence. FixedOtp table for dev/QA/app-store-review — checked before provider, before rate limiting.
+
+**M1 (planned):** Add `CommunicationProvider` table to Prisma schema:
+- `channel` (SMS | WHATSAPP | EMAIL), `name` ("msg91", "twilio", "gupshup"), `isActive`, `priority` (failover ordering), `credentials` (encrypted JSON — AES-256-GCM at app layer, key from CRED_ENCRYPT_KEY env var), `config` (JSON — rate limits, templates)
+- Factory switches from "read env var" to "read CommunicationProvider table" — one file change, zero impact on auth service or controller
+- In-memory cache loaded at startup, 5-minute TTL refresh. DB down? Cached config still works.
+- Each provider defines its own credential shape (MSG91: authKey/senderId/templateId, Twilio: accountSid/authToken/serviceSid). Validated at app layer when provider class parses it.
+
+**The interface is the abstraction boundary.** Auth service calls `otpProvider.sendOtp()` and never knows where the credentials came from or which provider is active.
+
+### ADR-010: Route naming — debug-friendly last segments
+
+Every API route's last path segment must be self-descriptive in a browser network tab. No generic segments like `/me`, `/request`, `/verify`, `/status`, `/list`. Examples: `/auth/otp-request` (not `/auth/otp/request`), `/auth/otp-verify`, `/auth/token-refresh`. Nested resource routes like `/events/:id/guests` are acceptable since the parent provides context, but action sub-routes must be qualified (e.g., `/events/:id/guest-import` not `/events/:id/import`).
+
+### ADR-011: User entry flows and auth scope
+
+- **Host**: signs up via phone OTP → creates event → EventMembership(role: HOST, createdById: self)
+- **Co-host**: invited by host via WhatsApp link containing invite token → phone OTP → EventMembership(role: HOST) auto-created. Multiple HOSTs per event supported. No separate COHOST role.
+- **Organizer** (wedding planner): invited by host → phone OTP or Google SSO → EventMembership(role: ORGANIZER)
+- **Guest**: gets event link (e/{slug}) via WhatsApp → event page is PUBLIC (no auth). Phone OTP required only for RSVP and shagun.
+- **Vendor**: data rows managed by host. No login, no EventMembership. Vendor portal is M3+.
+- **Org/Admin**: Google SSO or email OTP to admin panel. Separate concern from user-facing auth.
+
+Auth module handles authentication ("who are you"). EventMembership handles authorization ("what can you do here"). Profile endpoint belongs in users module, not auth.
+
 ## Performance Targets
 
 - Guest page first paint: < 1.5s on 4G

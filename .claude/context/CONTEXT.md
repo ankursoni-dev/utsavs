@@ -26,6 +26,7 @@
 > The curator adds an entry here for each module under `modules/`.
 > Format: `- [name](modules/<name>.md) — one-line purpose`
 
+- [auth](modules/auth.md) — Phone OTP + JWT auth: otp-request/otp-verify/token-refresh, FixedOtp bypass, jti rotation
 - [shared-types](modules/shared-types.md) — @repo/shared-types: 14 shared enums + 6 theme token maps (imported by both api and web)
 - [data-model](modules/data-model.md) — Prisma 7 schema: 16 models, 14 enums, money-in-paise convention, PrismaService global injection
 - [web-shell](modules/web-shell.md) — Next.js 16 shell: Docker dev, design tokens, ThemeProvider, UI primitives, route groups
@@ -39,7 +40,8 @@ _(no ADRs yet)_
 
 ## Key cross-cutting concerns
 
-> Fill in as cross-cutting infrastructure is implemented:
-> - **Response envelope** — which interceptor, where it lives
-> - **Error envelope** — which filter, the standard shape
-> - **Validation** — global pipe config, 422 detail format
+- **Auth guard** — `JwtAuthGuard` from `AuthModule`; opt-in via `@UseGuards(JwtAuthGuard)`; `@Public()` decorator bypasses it
+- **Redis** — `RedisModule` (@Global); inject `REDIS_CLIENT` token for raw ioredis access; requires `REDIS_URL` env var
+- **Response envelope** — (to be documented)
+- **Error envelope** — (to be documented)
+- **Validation** — global pipe config, 422 detail format (to be documented)

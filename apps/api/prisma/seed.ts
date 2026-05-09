@@ -485,6 +485,23 @@ async function main(): Promise<void> {
     });
   }
 
+  // Fixed OTPs for dev/QA
+  await prisma.fixedOtp.upsert({
+    where: { phone: '+919999900001' },
+    create: { phone: '+919999900001', otp: '123456', label: 'dev-host', isActive: true },
+    update: {},
+  });
+  await prisma.fixedOtp.upsert({
+    where: { phone: '+919999900002' },
+    create: { phone: '+919999900002', otp: '123456', label: 'dev-guest', isActive: true },
+    update: {},
+  });
+  await prisma.fixedOtp.upsert({
+    where: { phone: '+919999900003' },
+    create: { phone: '+919999900003', otp: '123456', label: 'dev-organizer', isActive: true },
+    update: {},
+  });
+
   console.log(
     `Seeded event "${event.slug}" (${event.id}): ${subEvents.length} sub-events, ${guests.length} guests, ${vendors.length} vendors.`,
   );

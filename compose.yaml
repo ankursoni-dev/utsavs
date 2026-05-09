@@ -24,6 +24,13 @@ services:
       - DATABASE_URL=postgresql://utsavs:utsavs@postgres:5432/utsavs
       - REDIS_URL=redis://redis:6379
       - CORS_ORIGIN=http://localhost:3000
+      - JWT_SECRET=dev-secret-change-me
+      - JWT_REFRESH_SECRET=dev-refresh-secret-change-me
+      - JWT_EXPIRY=15m
+      - JWT_REFRESH_EXPIRY=30d
+      - OTP_EXPIRY_SECONDS=300
+      - OTP_RATE_LIMIT=5
+      - MSG91_AUTH_KEY=
     depends_on:
       postgres:
         condition: service_healthy

@@ -18,8 +18,8 @@
 
 | Prompt | Status | Notes |
 |--------|--------|-------|
-| M0-P1 | PENDING | |
-| M0-P2 | PENDING | |
-| M0-P3 | PENDING | |
+| M0-P1 | ✅ DONE | Docker + Tailwind + Route Scaffold (MASTER) |
+| M0-P2 | ✅ DONE | Prisma Schema + Seed + Restructure (MASTER) |
+| M0-P3 | READY | Auth Module — Phone OTP + JWT (standard pipeline, multi-strategy, fixed OTP, config-driven providers) |
 | M0-P4 | PENDING | |
 | M0-P5 | PENDING | |

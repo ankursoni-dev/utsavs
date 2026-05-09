@@ -341,3 +341,12 @@ model Activity {
 
   @@index([eventId, createdAt])
 }
+
+model FixedOtp {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  otp       String
+  label     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
