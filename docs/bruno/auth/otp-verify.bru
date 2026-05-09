@@ -1,0 +1,39 @@
+meta {
+  name: OTP Verify
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/otp-verify
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone": "{{phone}}",
+    "otp": "{{fixedOtp}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 || res.status === 201) {
+    bru.setEnvVar("accessToken", res.body.accessToken);
+    bru.setEnvVar("refreshToken", res.body.refreshToken);
+  }
+}
+
+docs {
+  Verify OTP and receive JWT tokens.
+
+  On success: returns accessToken (15m), refreshToken (30d), and user object.
+  Automatically saves tokens to environment variables for subsequent requests.
+  New phone numbers create a user automatically (upsert).
+
+  OTP is one-time use — it is deleted from Redis on successful verify.
+}

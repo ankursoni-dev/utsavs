@@ -1,0 +1,36 @@
+meta {
+  name: Token Refresh
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/auth/token-refresh
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "refreshToken": "{{refreshToken}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 || res.status === 201) {
+    bru.setEnvVar("accessToken", res.body.accessToken);
+    bru.setEnvVar("refreshToken", res.body.refreshToken);
+  }
+}
+
+docs {
+  Refresh an expired access token using a valid refresh token.
+
+  Rotates the refresh token (old one is revoked, new one issued).
+  Automatically updates environment variables with new tokens.
+  Using an already-rotated refresh token returns 401 (replay protection).
+}

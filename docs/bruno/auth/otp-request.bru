@@ -1,0 +1,35 @@
+meta {
+  name: OTP Request
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/otp-request
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone": "{{phone}}"
+  }
+}
+
+docs {
+  Request an OTP for phone authentication.
+
+  Uses FixedOtp table in dev — seeded numbers (+919999900001/2/3) always return OTP 123456.
+  Rate limited to 5 requests per phone per hour.
+
+  Phone formats accepted:
+  - "9876543210"        (10 digits, no prefix)
+  - "919876543210"      (with 91 country code)
+  - "+919876543210"     (with +91 prefix)
+  - "+91 98765 43210"   (with spaces)
+  - "09876543210"       (with leading 0)
+}
