@@ -1,8 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PrismaService } from '../../../prisma/prisma.service';
 
 interface JwtPayload {
   sub: string;
@@ -16,10 +15,7 @@ export interface JwtUser {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -27,11 +23,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<JwtUser> {
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-    return { userId: user.id, phone: user.phone };
+  validate(payload: JwtPayload): JwtUser {
+    // JWT is signed by us and not expired — trust the payload.
+    // User existence was verified at token issuance (verifyOtp) and refresh (refreshTokens).
+    // Real-time revocation is handled via refresh token rotation (jti in Redis).
+    // If user-ban mid-session is ever needed, add a Redis blacklist check here — not a DB call.
+    return { userId: payload.sub, phone: payload.phone };
   }
 }

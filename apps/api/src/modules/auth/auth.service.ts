@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -32,15 +33,23 @@ interface RefreshPayload {
  */
 interface RedisClient {
   get(key: string): Promise<string | null>;
-  set(key: string, value: string, mode: 'EX', duration: number): Promise<'OK' | null>;
+  set(
+    key: string,
+    value: string,
+    mode: 'EX',
+    duration: number,
+  ): Promise<'OK' | null>;
   del(...keys: string[]): Promise<number>;
-  incr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<number>;
   ttl(key: string): Promise<number>;
+  eval(
+    script: string,
+    numkeys: number,
+    ...args: (string | number)[]
+  ): Promise<unknown>;
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
   private readonly otpExpiry: number;
   private readonly rateLimit: number;
@@ -48,6 +57,15 @@ export class AuthService {
   private readonly jwtExpiry: string;
   private readonly refreshSecret: string;
   private readonly refreshExpiry: string;
+  private fixedOtpMap: Map<string, string> = new Map();
+
+  private static readonly RATE_LIMIT_LUA = `
+    local count = redis.call('INCR', KEYS[1])
+    if count == 1 then
+      redis.call('EXPIRE', KEYS[1], ARGV[1])
+    end
+    return count
+  `;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -58,33 +76,48 @@ export class AuthService {
   ) {
     this.otpExpiry = this.configService.get<number>('OTP_EXPIRY_SECONDS', 300);
     this.rateLimit = this.configService.get<number>('OTP_RATE_LIMIT', 5);
-    this.jwtSecret = this.configService.get<string>('JWT_SECRET', 'fallback-secret');
+    this.jwtSecret = this.configService.get<string>(
+      'JWT_SECRET',
+      'fallback-secret',
+    );
     this.jwtExpiry = this.configService.get<string>('JWT_EXPIRY', '15m');
     this.refreshSecret = this.configService.get<string>(
       'JWT_REFRESH_SECRET',
       'fallback-refresh-secret',
     );
-    this.refreshExpiry = this.configService.get<string>('JWT_REFRESH_EXPIRY', '30d');
+    this.refreshExpiry = this.configService.get<string>(
+      'JWT_REFRESH_EXPIRY',
+      '30d',
+    );
+  }
+
+  async onModuleInit(): Promise<void> {
+    const rows = await this.prisma.fixedOtp.findMany({
+      where: { isActive: true },
+    });
+    // Phone values in DB must be in normalized E.164 format (+91XXXXXXXXXX) — requestOtp looks up by normalized key.
+    this.fixedOtpMap = new Map(rows.map((r) => [r.phone, r.otp]));
+    this.logger.log(`Loaded ${this.fixedOtpMap.size} fixed OTPs`);
   }
 
   async requestOtp(phone: string): Promise<OtpRequestResponseDto> {
     const normalized = normalizeIndianPhone(phone);
 
     // Check for fixed OTP first (dev/QA bypass) — before rate limit check
-    const fixedOtp = await this.prisma.fixedOtp.findFirst({
-      where: { phone: normalized, isActive: true },
-    });
+    const fixedOtp = this.fixedOtpMap.get(normalized);
     if (fixedOtp) {
-      await this.redis.set(`otp:${normalized}`, fixedOtp.otp, 'EX', this.otpExpiry);
+      await this.redis.set(`otp:${normalized}`, fixedOtp, 'EX', this.otpExpiry);
       this.logger.log(`[FIXED OTP] ${normalized}: using pinned OTP`);
       return { message: 'OTP sent', expiresIn: this.otpExpiry };
     }
 
-    // Rate limit check
-    const count = await this.redis.incr(`otp_rate:${normalized}`);
-    if (count === 1) {
-      await this.redis.expire(`otp_rate:${normalized}`, 3600);
-    }
+    // Rate limit check — atomic via Lua to avoid INCR+EXPIRE race condition
+    const count = (await this.redis.eval(
+      AuthService.RATE_LIMIT_LUA,
+      1,
+      `otp_rate:${normalized}`,
+      3600,
+    )) as number;
     if (count > this.rateLimit) {
       const ttl = await this.redis.ttl(`otp_rate:${normalized}`);
       throw new HttpException(
@@ -123,21 +156,18 @@ export class AuthService {
       update: {},
     });
 
-    // Cast expiresIn to any to bypass StringValue branded type — runtime value is valid ms notation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const accessToken = this.jwtService.sign({ sub: user.id, phone: user.phone } as any, {
-      secret: this.jwtSecret,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expiresIn: this.jwtExpiry as any,
-    });
+    const accessToken = this.signToken(
+      { sub: user.id, phone: user.phone },
+      this.jwtSecret,
+      this.jwtExpiry,
+    );
 
     const jti = crypto.randomUUID();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const refreshToken = this.jwtService.sign({ sub: user.id, jti } as any, {
-      secret: this.refreshSecret,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expiresIn: this.refreshExpiry as any,
-    });
+    const refreshToken = this.signToken(
+      { sub: user.id, jti },
+      this.refreshSecret,
+      this.refreshExpiry,
+    );
 
     await this.redis.set(
       `refresh:${user.id}:${jti}`,
@@ -178,21 +208,18 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Cast expiresIn to any to bypass StringValue branded type — runtime value is valid ms notation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const newAccessToken = this.jwtService.sign({ sub: user.id, phone: user.phone } as any, {
-      secret: this.jwtSecret,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expiresIn: this.jwtExpiry as any,
-    });
+    const newAccessToken = this.signToken(
+      { sub: user.id, phone: user.phone },
+      this.jwtSecret,
+      this.jwtExpiry,
+    );
 
     const newJti = crypto.randomUUID();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const newRefreshToken = this.jwtService.sign({ sub: user.id, jti: newJti } as any, {
-      secret: this.refreshSecret,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expiresIn: this.refreshExpiry as any,
-    });
+    const newRefreshToken = this.signToken(
+      { sub: user.id, jti: newJti },
+      this.refreshSecret,
+      this.refreshExpiry,
+    );
 
     await this.redis.set(
       `refresh:${user.id}:${newJti}`,
@@ -202,5 +229,18 @@ export class AuthService {
     );
 
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  }
+
+  private signToken(
+    payload: Record<string, unknown>,
+    secret: string,
+    expiresIn: string,
+  ): string {
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
+    return this.jwtService.sign(payload as any, {
+      secret,
+      expiresIn: expiresIn as any,
+    });
+    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
   }
 }

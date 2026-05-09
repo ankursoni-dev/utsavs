@@ -16,7 +16,7 @@ jest.mock('crypto', () => ({
 
 const mockPrisma = {
   fixedOtp: {
-    findFirst: jest.fn(),
+    findMany: jest.fn(),
   },
   user: {
     upsert: jest.fn(),
@@ -50,6 +50,7 @@ const mockRedis = {
   incr: jest.fn(),
   expire: jest.fn(),
   ttl: jest.fn(),
+  eval: jest.fn(),
 };
 
 const mockOtpProvider = {
@@ -74,6 +75,12 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+
+    // Seed the in-memory fixed OTP map (normally called by NestJS lifecycle)
+    mockPrisma.fixedOtp.findMany.mockResolvedValue([
+      { phone: '+919999900001', otp: '123456', isActive: true },
+    ]);
+    await service.onModuleInit();
   });
 
   // -------------------------------------------------------------------------
@@ -81,9 +88,7 @@ describe('AuthService', () => {
   // -------------------------------------------------------------------------
   describe('requestOtp', () => {
     it('should generate and store an OTP for a valid phone number (happy path)', async () => {
-      mockPrisma.fixedOtp.findFirst.mockResolvedValue(null);
-      mockRedis.incr.mockResolvedValue(1);
-      mockRedis.expire.mockResolvedValue(1);
+      mockRedis.eval.mockResolvedValue(1); // first request, count = 1
       mockRedis.set.mockResolvedValue('OK');
       mockOtpProvider.sendOtp.mockResolvedValue(undefined);
 
@@ -95,24 +100,18 @@ describe('AuthService', () => {
     });
 
     it('should use fixed OTP and NOT call the provider when phone has a pinned OTP', async () => {
-      mockPrisma.fixedOtp.findFirst.mockResolvedValue({
-        id: 'fixed-1',
-        phone: '+919999900001',
-        otp: '123456',
-        isActive: true,
-      });
+      // +919999900001 is seeded in fixedOtpMap via onModuleInit in beforeEach
       mockRedis.set.mockResolvedValue('OK');
 
       const result = await service.requestOtp('+919999900001');
 
       expect(result).toEqual({ message: 'OTP sent', expiresIn: 300 });
       expect(mockOtpProvider.sendOtp).not.toHaveBeenCalled();
-      expect(mockRedis.incr).not.toHaveBeenCalled();
+      expect(mockRedis.eval).not.toHaveBeenCalled();
     });
 
     it('should throw TOO_MANY_REQUESTS when rate limit is exceeded', async () => {
-      mockPrisma.fixedOtp.findFirst.mockResolvedValue(null);
-      mockRedis.incr.mockResolvedValue(6); // count > rateLimit (5)
+      mockRedis.eval.mockResolvedValue(6); // count > rateLimit (5)
       mockRedis.ttl.mockResolvedValue(3600);
 
       await expect(service.requestOtp('9876543210')).rejects.toThrow(HttpException);
