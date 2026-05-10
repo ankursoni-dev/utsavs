@@ -158,3 +158,48 @@ body {
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
+
+/* Outline button brand-tint hover — used by hero secondary CTA. */
+.btn-outline-hover:hover {
+  background-color: color-mix(in srgb, var(--brand-primary) 5%, transparent);
+}
+
+/* ── Golden leaf particles (Change 6) ── */
+@keyframes particle-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.particle-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  background: linear-gradient(135deg, #c8a96b, #e8d5a3);
+  border-radius: 50% 0 50% 0;
+  animation: particle-fall linear infinite;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle {
+    animation: none;
+    opacity: 0 !important;
+  }
+}

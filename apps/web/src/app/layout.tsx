@@ -1,35 +1,33 @@
-import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Marcellus } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono, Marcellus } from 'next/font/google';
+import './globals.css';
 
 const marcellus = Marcellus({
-  variable: "--font-marcellus",
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
+  variable: '--font-marcellus',
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
 });
 
 const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
+  variable: '--font-inter',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  display: "swap",
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "Utsavs — The Command Center for Indian Weddings",
+  title: 'Utsavs — From Chaos to Command',
   description:
-    "Budgets, vendors, guests, shagun — one platform for wedding organizers and host families.",
+    'Manage guests, budgets, vendors, logistics, and shagun from one command center. Built for wedding organizers and host families.',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"

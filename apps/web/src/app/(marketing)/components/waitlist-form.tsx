@@ -1,9 +1,8 @@
-"use client";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+'use client';
+import { useState } from 'react';
 
 export function WaitlistForm() {
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -14,11 +13,9 @@ export function WaitlistForm() {
   if (submitted) {
     return (
       <div className="mt-8 text-center">
-        <p className="text-lg font-display text-charcoal">
-          You're on the list.
-        </p>
+        <p className="text-lg font-display text-charcoal">You&apos;re on the list.</p>
         <p className="text-sm text-text-muted mt-2">
-          We'll reach out on WhatsApp when we launch.
+          We&apos;ll reach out on WhatsApp when we launch.
         </p>
       </div>
     );
@@ -38,14 +35,13 @@ export function WaitlistForm() {
         aria-label="Phone number"
         className="w-full sm:flex-1 h-[46px] px-4 border border-border-strong rounded-[var(--radius-md)] sm:rounded-r-none focus:outline-none focus:ring-2 focus:ring-charcoal bg-surface text-text text-sm"
       />
-      <Button
+      <button
         type="submit"
-        variant="primary"
-        size="lg"
-        className="w-full sm:w-auto sm:rounded-l-none mt-2 sm:mt-0 px-6"
+        className="w-full sm:w-auto sm:rounded-l-none mt-2 sm:mt-0 h-[46px] px-6 text-white text-sm font-medium rounded-[var(--radius-md)] shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 cursor-pointer"
+        style={{ backgroundColor: 'var(--brand-primary)' }}
       >
         Get Early Access
-      </Button>
+      </button>
     </form>
   );
 }

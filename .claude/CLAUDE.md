@@ -90,10 +90,11 @@ All development runs inside Docker containers. No `pnpm dev` or `npm run dev` on
 
 | Agent | Model | Invoked when | Cost class |
 |---|---|---|---|
+| `ARCHITECT-REVIEWER` | opus | Post-approval deep review on Tier 3 backend tasks. Finds performance/scalability/design improvements the sonnet reviewer misses. | Medium — one read-only pass, 5-7 suggestions max |
 | `MASTER` | opus | Hard problems, design decisions, ambiguous specs, stalled standard pipeline | High — use sparingly |
 | `AUDITOR` | opus | End-to-end codebase audit (`/AUDIT` command) | Highest — but Phase 1 now delegates to sonnet reviewer |
 
-The model split is deliberate: high-judgment work runs on `sonnet` or `opus`; mechanical work runs on `haiku`.
+The model split is deliberate: high-judgment work runs on `sonnet` or `opus`; mechanical work runs on `haiku`. The `ARCHITECT-REVIEWER` is the exception — it's opus but scoped to a single advisory pass (no loops, no rewrites), so cost is bounded.
 
 ### Repowise MCP (optional but recommended)
 
@@ -188,6 +189,13 @@ NESTJS-REVIEWER (reviewing wiki this time)
   ↓ if rejected: loop back to curator
   ↓ if approved: continue
 Main session
+  ↓ ARCHITECT REVIEW (Tier 3 backend only — see below)
+  ↓ if Tier 3 + backend: delegate to ARCHITECT-REVIEWER with changed files + deps
+  ↓ ARCHITECT-REVIEWER returns suggestions (not blockers)
+  ↓ surface suggestions to user → user picks which to implement
+  ↓ if user picks any: loop back to {CODER} with selected suggestions → {REVIEWER} re-approves
+  ↓ if user declines all or verdict is "clean": continue
+Main session
   ↓ REPOWISE SYNC (if Repowise is indexed)
   ↓ run: repowise update --dry-run → check if changed files need wiki regeneration
   ↓ if stale: run repowise update → regenerates wiki pages for changed files
@@ -200,6 +208,7 @@ Main session
 - **Tests are expensive** (DB, network, time).
 - **Reject early, reject cheap.** No point running tests on code that has structural blockers.
 - **Typecheck/lint gates are free** (~2 second bash calls). They catch ~30% of what the reviewer would catch, saving a reviewer round-trip.
+- **Architect review runs last** (after tests pass). It's advisory, not a gate — suggestions go to the user, not back into the pipeline automatically. Running it after tests means we only spend opus tokens on code that's already correct and tested.
 
 ---
 
@@ -269,6 +278,53 @@ Example handoff to coder after a rejected review:
 > Fix only the issues listed. Do not touch unrelated code.
 
 **Never delegate with vague context.** Phrases like "based on what you discovered" or "review the changes" without file lists waste tokens — the downstream agent will Glob/Grep to rediscover what you already know.
+
+---
+
+## Architect review (post-approval, Tier 3 backend only)
+
+After the standard pipeline approves and tests pass on a **Tier 3 backend task**, invoke the `ARCHITECT-REVIEWER` (opus) for a single advisory pass. This catches performance, scalability, and design issues that the sonnet reviewer doesn't look for — things like unnecessary DB round-trips, race conditions, missing caching, and abstraction boundary problems.
+
+### When to run
+
+- ✅ Tier 3 backend tasks (new NestJS modules, new endpoints with business logic, transaction flows)
+- ❌ Tier 1-2 tasks (not worth the opus cost)
+- ❌ Frontend tasks (performance concerns are different — browser, not server)
+- ❌ `/MASTER` tasks (MASTER is already opus and handles design)
+- ❌ `/AUDIT` tasks (AUDITOR already covers architectural assessment)
+
+### How to delegate
+
+Use the same context passport pattern. Example handoff:
+
+> Use the ARCHITECT-REVIEWER subagent to review these files for performance, scalability, and design improvements:
+>
+> Changed:
+> - `src/modules/auth/auth.service.ts` (modified, ~120 lines)
+> - `src/modules/auth/strategies/jwt.strategy.ts` (modified)
+>
+> Dependencies:
+> - `src/modules/auth/providers/otp-provider.interface.ts` (for abstraction check)
+> - `src/modules/auth/auth.module.ts` (for DI wiring context)
+>
+> Coder summary: "Added requestOtp with rate limiting via Redis INCR, verifyOtp with fixed OTP bypass from DB, and refreshTokens with jti rotation. Tests cover happy path + rate limit + expired token."
+>
+> This is an M0 task — flag scaling risks but respect the milestone scope.
+
+### What to do with the output
+
+The ARCHITECT-REVIEWER returns a JSON with `suggestions[]`. Each suggestion has `impact`, `effort`, and `category`.
+
+1. **Surface ALL suggestions to the user.** Format them clearly — title, problem, suggestion, impact, effort. Don't filter.
+2. **User decides.** They may implement all, some, or none. This is advisory.
+3. **If user picks suggestions to implement:** create a `/QUICK` task (or standard pipeline if the fix is large) for each selected suggestion. The sonnet reviewer re-approves after the fix.
+4. **If verdict is `"clean"`:** report it and move on. A clean verdict is valuable signal — it means the architecture is solid.
+
+### Cost control
+
+The architect review is a **single pass, no loops.** The ARCHITECT-REVIEWER reads files once and returns suggestions. It never loops back to itself. If the user implements suggestions and the coder makes changes, the standard sonnet reviewer handles re-approval — NOT the architect.
+
+Expected cost per invocation: ~$0.05-0.10 (opus, read-only, 5-10 files, structured output).
 
 ---
 
@@ -396,18 +452,19 @@ Inside the audit's Phase 5, the same budgets apply per-plan-item.
 
 ## When to skip steps
 
-| Task type | Coder | Typecheck Gate | Reviewer | Tester | Curator |
-|---|---|---|---|---|---|
-| New feature (Tier 3) | ✅ | ✅ | ✅ | ✅ (Deep) | ✅ |
-| Bug fix (Tier 2) | ✅ | ✅ | ✅ | ✅ (Targeted) | ❓ skip if behaviour unchanged at module-API level |
-| Refactor (Tier 2) | ✅ | ✅ | ✅ | ✅ (Targeted) | ❌ |
-| Trivial change (Tier 1) | ✅ | ✅ | ✅ (with extras) | conditional (Quick Smoke) | conditional |
-| Doc-only change | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Test-only addition | ✅ | ✅ | ✅ | ✅ (Targeted) | ❌ |
-| Config / dependency bump | ✅ | ✅ | ✅ | ✅ (Deep) | ❌ |
-| Wiki update only | ❌ | ❌ | ✅ | ❌ | ✅ |
-| `/MASTER` task | varies | varies | varies | varies | varies |
-| `/AUDIT` | full pipeline per item | yes | yes (audit mode for Phase 1) | yes | per item |
+| Task type | Coder | Typecheck Gate | Reviewer | Tester | Architect | Curator |
+|---|---|---|---|---|---|---|
+| New feature (Tier 3, backend) | ✅ | ✅ | ✅ | ✅ (Deep) | ✅ | ✅ |
+| New feature (Tier 3, frontend) | ✅ | ✅ | ✅ | ✅ (Deep) | ❌ | ✅ |
+| Bug fix (Tier 2) | ✅ | ✅ | ✅ | ✅ (Targeted) | ❌ | ❓ skip if behaviour unchanged at module-API level |
+| Refactor (Tier 2) | ✅ | ✅ | ✅ | ✅ (Targeted) | ❌ | ❌ |
+| Trivial change (Tier 1) | ✅ | ✅ | ✅ (with extras) | conditional (Quick Smoke) | ❌ | conditional |
+| Doc-only change | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Test-only addition | ✅ | ✅ | ✅ | ✅ (Targeted) | ❌ | ❌ |
+| Config / dependency bump | ✅ | ✅ | ✅ | ✅ (Deep) | ❌ | ❌ |
+| Wiki update only | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
+| `/MASTER` task | varies | varies | varies | varies | ❌ (MASTER is already opus) | varies |
+| `/AUDIT` | full pipeline per item | yes | yes (audit mode for Phase 1) | yes | ❌ (AUDITOR covers this) | per item |
 
 ---
 
@@ -481,7 +538,8 @@ This replaces the need for post-pipeline `repowise update` calls during the sess
 - **Passes explicit file lists** to every downstream agent (Synthesis Mandate).
 - **Tracks loop counts.** Enforce the budget.
 - **Bridges human gates.** Auditor's Phase 4, MASTER's delegation requests.
-- **Aggregates the final report.** What shipped, what tests passed, what wikis updated, what Repowise pages synced.
+- **Invokes ARCHITECT-REVIEWER** on Tier 3 backend tasks after tests pass. Surfaces suggestions to user. Does NOT auto-implement.
+- **Aggregates the final report.** What shipped, what tests passed, architect suggestions (if any), what wikis updated, what Repowise pages synced.
 - **Syncs Repowise** after successful pipeline runs — see mandatory step below.
 
 ### MANDATORY: Repowise sync after every commit
@@ -554,15 +612,15 @@ The wikis are the baseline (always available). Repowise is the upgrade (richer, 
 > (documentation, ownership, history, decisions). **Always verify against
 > actual source files before making changes** — the index may be stale.
 
-Last indexed: 2026-05-10 (commit e54bb14). Confidence: 100%.
+Last indexed: 2026-05-10 (commit 0ab1956). Confidence: 100%.
 ### Architecture
-repo is a structured monorepo designed to facilitate seamless communication between a frontend web application and a backend API. With a total of 141 files and approximately 13,197 lines of code, the project maintains a clean dependency graph with zero circular dependencies, ensuring high maintainability and predictable build behavior. The repository is heavily typed with TypeScript, which accounts for over 42% of the codebase, promoting type safety across the full stack. The project leverages a modern, robust stack optimized for developer productivity and scalability:
+repo is a structured monorepo designed to facilitate seamless development across frontend and backend services. With a codebase spanning over 14,000 lines, the project emphasizes type safety and modularity, utilizing a robust configuration set to maintain high code quality. The repository is currently in an active development phase, characterized by frequent updates to the marketing-facing web components and a stable, circular-dependency-free architecture. The project leverages a modern, type-safe stack with a focus on developer experience and scalability:
 
-*   **Languages:** TypeScript (Primary), JavaScript, Python, SQL.
+*   **Languages:** Primarily **TypeScript** (45.3%), supplemented by JavaScript, Python, and SQL for infrastructure and data tasks.
 ### Key Modules
 | Module | Purpose | Owner |
 |--------|---------|-------|
-| `apps` | The apps module serves as the primary workspace for the application's frontend i | — |
+| `apps` | The apps module serves as the primary workspace for the web application's fronte | — |
 | `.claude` | The .claude module serves as the central configuration and security enforcement  | — |
 | `packages` | The packages module serves as a centralized repository for shared definitions an | — |
 ### Entry Points
@@ -576,10 +634,10 @@ repo is a structured monorepo designed to facilitate seamless communication betw
 | File | Churn | 90d Commits | Owner |
 |------|-------|-------------|-------|
 | `pnpm-lock.yaml` | 100.0th %ile | 4 | Ankur Soni |
-| `apps/api/prisma/schema.prisma` | 98.8th %ile | 3 | Ankur Soni |
-| `apps/api/prisma/seed.ts` | 97.6th %ile | 3 | Ankur Soni |
-| `apps/api/src/modules/auth/auth.service.ts` | 96.3th %ile | 2 | Ankur Soni |
-| `.claude/context/modules/data-model.md` | 95.1th %ile | 3 | Ankur Soni |
+| `apps/web/src/app/(marketing)/page.tsx` | 99.0th %ile | 5 | Ankur Soni |
+| `apps/web/src/app/(marketing)/components/step-timeline.tsx` | 97.9th %ile | 4 | Ankur Soni |
+| `apps/api/prisma/schema.prisma` | 96.9th %ile | 3 | Ankur Soni |
+| `.claude/CLAUDE.md` | 95.8th %ile | 2 | Ankur Soni |
 
 ### Repowise MCP Tools
 
