@@ -187,6 +187,94 @@ Every API route's last path segment must be self-descriptive in a browser networ
 
 Auth module handles authentication ("who are you"). EventMembership handles authorization ("what can you do here"). Profile endpoint belongs in users module, not auth.
 
+### ADR-012: Unified API logging via BullMQ → Postgres (async, non-blocking)
+
+**Single unified table** with a `direction` flag — no separate tables for inbound vs outbound. Every HTTP interaction (your API receiving a request, or your API calling a third-party) is one row in `ApiLog`.
+
+**Schema:**
+```
+ApiLog {
+  id              String    @id @default(cuid())
+  direction       Direction (INBOUND | OUTBOUND)
+
+  // Core — same for both directions
+  method          String    // GET, POST, PUT, DELETE, PATCH
+  url             String    // /auth/otp-request (inbound) or https://api.msg91.com/... (outbound)
+  statusCode      Int?      // null if request failed before response
+  durationMs      Int       // response time in ms
+
+  // Bodies — stored raw for debugging, pruned after 7 days
+  requestBody     Json?     // full request body
+  responseBody    Json?     // full response body
+  requestHeaders  Json?     // selected headers (auth headers stripped)
+  responseHeaders Json?     // selected response headers
+
+  // Context
+  ip              String?   // client IP for inbound (X-Forwarded-For aware), null for outbound
+  userAgent       String?   // for inbound
+  userId          String?   // authenticated user, if available
+
+  // Correlation — links inbound to its outbound calls
+  traceId         String?   // shared ID: inbound request + all outbound calls it triggered
+  parentLogId     String?   // outbound only: which inbound log row triggered this call
+
+  // Error tracking
+  error           String?   // error message if failed
+  errorStack      String?   // stack trace if available
+
+  // Extensible — anything else goes here
+  metadata        Json?     // UTM params, retry count, provider name, webhook event, etc.
+
+  createdAt       DateTime  @default(now())
+
+  @@index([direction, createdAt])
+  @@index([traceId])
+  @@index([userId, createdAt])
+  @@index([statusCode, createdAt])
+  @@index([url, createdAt])
+}
+```
+
+**Why single table:** "Show me everything that happened in the last hour" is one query, not a UNION. One partition strategy, one index set, one retention policy. The `direction` flag + `traceId` correlation gives you the full picture: inbound request → outbound calls it triggered → responses.
+
+**What goes in `metadata` (not core columns):** provider name, retry count, webhook event type, UTM params, correlation IDs from third parties, anything domain-specific. This keeps the core schema generic and stable.
+
+**Flow:** NestJS interceptor captures request/response → enqueues BullMQ job on `api-log` queue (Redis) → worker batch-INSERTs to Postgres every 5 seconds. Response returns immediately.
+
+**Retention policy (two-tier):**
+- **7 days:** Full rows with bodies (`requestBody`, `responseBody`, `requestHeaders`, `responseHeaders`)
+- **After 7 days:** Cron job NULLs out body columns, keeps metadata rows (method, url, status, duration, IP, userId, traceId, error, metadata)
+- **After 90 days:** Drop monthly partition entirely
+
+**Why not RabbitMQ:** BullMQ sits on existing Redis. No new broker.
+**Why not stdout/Loki:** Need queryable logs ("all failed requests from this IP") — SQL beats grep.
+**Why Postgres:** Already in stack. JSONB for flexible metadata. Partitioning + retention prevents bloat.
+
+**M0:** Not built. Schema documented here.
+**M1:** Add ApiLog table + migration, logging interceptor, BullMQ worker, retention cron job.
+
+### ADR-013: Request metadata interceptor (IP, headers, UTM)
+
+NestJS interceptor (`RequestMetadataInterceptor`) extracts: client IP (respects X-Forwarded-For), user-agent, referer, UTM params (utm_source, utm_medium, utm_campaign, utm_content from query string), device type (parsed from UA). Attaches typed `RequestMetadata` object to `req.metadata`.
+
+UTM params are acquisition data — captured on first visit and stored on User or EventMembership record, not per-request. The interceptor makes them available; the service decides what to persist.
+
+**M0:** Not built. **M1:** Build interceptor, wire into logging and analytics.
+
+### ADR-014: Bruno API collection (Git-committed, updated every commit)
+
+Bruno collection lives at `docs/bruno/` in the monorepo root. Plain files, version-controlled, no cloud sync.
+
+**Pipeline standard:** After every API endpoint is built, the coder MUST create or update the Bruno collection with the new endpoints, including example request bodies. This is part of the definition of done — same as Swagger decorators. The reviewer checks for Bruno file presence.
+
+**Environment file:** `docs/bruno/environments/local.bru` using Bruno v3 format:
+- Regular vars: `baseUrl`, `phone`, `fixedOtp` (committed with values)
+- Secret vars: `accessToken`, `refreshToken` (runtime-filled, use `vars:secret [...]` block — NOT empty values after colon, which causes parse failures)
+
+**Folder structure mirrors API modules:** `docs/bruno/auth/`, `docs/bruno/events/`, `docs/bruno/guests/`, etc.
+
+**Post-response scripts:** `otp-verify.bru` and `token-refresh.bru` auto-save tokens to environment variables so the auth flow chains automatically.
+
 ## Performance Targets
 
 - Guest page first paint: < 1.5s on 4G

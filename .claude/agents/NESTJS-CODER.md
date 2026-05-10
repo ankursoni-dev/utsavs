@@ -124,6 +124,16 @@ Every controller method MUST have Swagger decorators. This is blocker-severity �
 
 If `@nestjs/swagger` is not installed, surface the need in your summary — the main session will approve the install.
 
+## Bruno API collection — mandatory
+
+Every new or modified API endpoint MUST have a corresponding Bruno `.bru` file in `docs/bruno/<module>/`. This is part of the definition of done — same weight as Swagger decorators.
+
+- Use Bruno v3 `.bru` format
+- Environment variables use `{{varName}}` syntax (e.g., `{{baseUrl}}`, `{{accessToken}}`)
+- Post-response scripts should auto-save tokens/IDs to environment variables when relevant
+- Environment file is at `docs/bruno/environments/local.bru` — do NOT use empty values after colon (causes parse failures). Use `vars:secret [...]` block for runtime-filled variables.
+- Include a `docs` block in each `.bru` file with a brief description of the endpoint
+
 ## Docker awareness
 
 All code must work inside a Docker container. This means:

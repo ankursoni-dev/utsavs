@@ -20,6 +20,6 @@
 |--------|--------|-------|
 | M0-P1 | ✅ DONE | Docker + Tailwind + Route Scaffold (MASTER) |
 | M0-P2 | ✅ DONE | Prisma Schema + Seed + Restructure (MASTER) |
-| M0-P3 | READY | Auth Module — Phone OTP + JWT (standard pipeline, multi-strategy, fixed OTP, config-driven providers) |
-| M0-P4 | PENDING | |
-| M0-P5 | PENDING | |
+| M0-P3 | ✅ DONE | Auth Module — Phone OTP + JWT (multi-strategy, fixed OTP, config-driven providers, Bruno collection, optimized) |
+| M0-P4 | READY | Landing Page — marketing shell + full landing page with 6 sections (Next.js, NEXTJS-CODER) |
+| M0-P5 | PENDING | CI/CD — GitHub Actions |
