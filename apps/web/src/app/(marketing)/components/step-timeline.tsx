@@ -52,6 +52,17 @@ const STEPS = [
   },
 ];
 
+function getGradientTextColor(grad: string): string {
+  const match = grad.match(/#([A-Fa-f0-9]{6})/);
+  if (!match) return "#171717";
+  const hex = match[1];
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.5 ? "#FBF9F6" : "#171717";
+}
+
 // ── Mock panels ──────────────────────────────────────────────────────────────
 
 function MockBudget() {
@@ -272,38 +283,59 @@ function MockGuests() {
 
 function MockInvitation() {
   const theme = THEMES["royal-ivory"];
+  const gradText = getGradientTextColor(theme.grad);
   return (
-    <div aria-hidden="true" className="flex justify-center">
+    <div aria-hidden="true" className="w-full max-w-[400px]">
       <div
-        className="w-[240px] h-[420px] rounded-[2rem] border-[3px] border-charcoal/20 shadow-[var(--shadow-lg)] rotate-2 overflow-hidden flex flex-col items-center justify-center gap-2 px-6"
+        className="rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] overflow-hidden"
         style={{ background: theme.grad }}
       >
-        <p
-          className="font-display text-2xl tracking-[-0.02em] text-center"
-          style={{ color: theme.text }}
-        >
-          Priya &amp; Arjun
-        </p>
-        <p className="text-sm mt-1 text-center" style={{ color: theme.text }}>
-          14 December 2026
-        </p>
-        <p
-          className="text-xs mt-0.5 opacity-70 text-center"
-          style={{ color: theme.text }}
-        >
-          Jaipur
-        </p>
-        <div className="flex flex-wrap gap-2 mt-4 justify-center">
-          {["Schedule", "RSVP", "Shagun"].map((label) => (
+        <div className="p-8 text-center" style={{ color: gradText }}>
+          <p className="text-xs uppercase tracking-widest opacity-60">
+            You're invited to
+          </p>
+          <p className="font-display text-3xl tracking-[-0.02em] mt-3">
+            Priya &amp; Arjun
+          </p>
+          <p className="text-sm mt-2 opacity-70">14 December 2026 · Jaipur</p>
+        </div>
+        <div className="px-6 pb-6 space-y-2">
+          {[
+            { name: "Mehendi", time: "Dec 12 · 4 PM" },
+            { name: "Sangeet", time: "Dec 13 · 7 PM" },
+            { name: "Wedding", time: "Dec 14 · 11 AM" },
+          ].map((ev) => (
+            <div
+              key={ev.name}
+              className="bg-white/20 backdrop-blur-sm rounded-lg p-3 flex justify-between items-center"
+            >
+              <span className="text-xs font-medium" style={{ color: gradText }}>
+                {ev.name}
+              </span>
+              <span className="text-xs opacity-60" style={{ color: gradText }}>
+                {ev.time}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 pb-6 flex gap-2 justify-center">
+          {["RSVP", "Schedule", "Shagun"].map((label) => (
             <span
               key={label}
-              className="border text-xs px-3 py-1 rounded-full"
-              style={{ borderColor: theme.text, color: theme.text }}
+              className="border text-xs px-3 py-1.5 rounded-full"
+              style={{ borderColor: `${gradText}40`, color: gradText }}
             >
               {label}
             </span>
           ))}
         </div>
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-2">
+        <div
+          className="w-3 h-3 rounded-full border border-border"
+          style={{ background: theme.primary }}
+        />
+        <span className="text-xs text-text-subtle">Royal Ivory theme</span>
       </div>
     </div>
   );

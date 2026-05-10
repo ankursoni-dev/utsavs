@@ -40,9 +40,9 @@ export function WaitlistForm() {
       />
       <Button
         type="submit"
-        variant="champagne"
+        variant="primary"
         size="lg"
-        className="w-full sm:w-auto sm:rounded-l-none mt-2 sm:mt-0"
+        className="w-full sm:w-auto sm:rounded-l-none mt-2 sm:mt-0 px-6"
       >
         Get Early Access
       </Button>

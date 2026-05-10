@@ -10,14 +10,23 @@ export default function MarketingHome() {
   return (
     <>
       {/* ── Section 1: Hero ──────────────────────────────────────── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6">
+      <section
+        className="relative min-h-screen flex flex-col items-center justify-center text-center px-6"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 0%, rgba(200,169,107,0.08) 0%, transparent 60%)",
+        }}
+      >
         <Eyebrow>For wedding organizers &amp; host families</Eyebrow>
         <Display size="2xl" as="h1" className="mt-4 max-w-4xl mx-auto">
           Stop running weddings on WhatsApp.
         </Display>
-        <p className="mt-6 text-lg text-text-muted max-w-xl mx-auto">
-          Utsavs gives organizers and families a single command center —
-          budgets, vendors, guests, shagun — so nothing falls through the
+        <p className="mt-6 text-lg text-text-muted max-w-xl mx-auto leading-relaxed">
+          Utsavs gives organizers and families a{" "}
+          <strong className="text-text font-medium">
+            single command center
+          </strong>{" "}
+          — budgets, vendors, guests, shagun — so nothing falls through the
           cracks.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -29,7 +38,7 @@ export default function MarketingHome() {
           </a>
           <a
             href="#how-it-works"
-            className="inline-flex items-center px-8 py-3 border border-charcoal text-charcoal font-medium rounded-[var(--radius-md)] hover:bg-hover transition-colors text-base"
+            className="inline-flex items-center px-8 py-3 border border-charcoal/20 text-charcoal font-medium rounded-[var(--radius-md)] hover:bg-hover hover:border-charcoal/40 transition-colors text-base"
           >
             See How It Works →
           </a>
@@ -40,7 +49,7 @@ export default function MarketingHome() {
       </section>
 
       {/* ── Section 2: How It Works ───────────────────────────────── */}
-      <section id="how-it-works" className="py-20 md:py-32">
+      <section id="how-it-works" className="py-20 md:py-32 bg-surface">
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center mb-16">
             <Eyebrow>How It Works</Eyebrow>
@@ -110,19 +119,21 @@ export default function MarketingHome() {
       </section>
 
       {/* ── Section 5: Building in Public ────────────────────────── */}
-      <section className="py-20 md:py-32">
+      <section className="py-16 md:py-24 bg-[#F5F0EB]">
         <div className="mx-auto max-w-4xl px-6 text-center">
           <Eyebrow>Early Access</Eyebrow>
           <Display size="lg" as="h2" className="mt-4 max-w-2xl mx-auto">
             We&apos;re building in public.
           </Display>
           <p className="mt-6 text-text-muted max-w-2xl mx-auto">
-            Utsavs is in active development. We&apos;re working with a small
-            group of wedding organizers in Jaipur and Delhi to build exactly
-            what they need. No fake metrics. No vaporware. Just a product shaped
-            by real feedback.
+            Utsavs is in active development. We&apos;re working with a{" "}
+            <em className="not-italic text-text font-medium">
+              small group of wedding organizers in Jaipur and Delhi
+            </em>{" "}
+            to build exactly what they need. No fake metrics. No vaporware. Just
+            a product shaped by real feedback.
           </p>
-          <div className="mt-12 max-w-md mx-auto text-left space-y-4">
+          <div className="mt-12 max-w-md mx-auto text-left space-y-4 border-l-2 border-emerald/30 pl-6">
             <div className="flex items-center gap-3">
               <span className="w-5 h-5 rounded-full bg-emerald flex items-center justify-center text-white text-xs">
                 &#10003;
@@ -158,7 +169,7 @@ export default function MarketingHome() {
       </section>
 
       {/* ── Section 6: Waitlist CTA ───────────────────────────────── */}
-      <section id="waitlist" className="py-20 md:py-32 text-center">
+      <section id="waitlist" className="py-16 md:py-24 text-center">
         <div className="mx-auto max-w-6xl px-6">
           <Eyebrow>Get Early Access</Eyebrow>
           <Display size="xl" as="h2" className="mt-4 max-w-2xl mx-auto">
