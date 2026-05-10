@@ -612,11 +612,11 @@ The wikis are the baseline (always available). Repowise is the upgrade (richer, 
 > (documentation, ownership, history, decisions). **Always verify against
 > actual source files before making changes** — the index may be stale.
 
-Last indexed: 2026-05-10 (commit e96e4f9). Confidence: 100%.
+Last indexed: 2026-05-10 (commit b65c2bd). Confidence: 100%.
 ### Architecture
-repo is a structured monorepo designed to manage both backend and frontend services within a unified workspace. With a codebase primarily driven by TypeScript (46.4%), the project emphasizes type safety and modularity. The repository is configured for high maintainability, featuring zero circular dependencies and a clean architectural separation between business logic, shared interfaces, and presentation layers. The project leverages a modern web development stack optimized for scalability and developer experience:
+repo is a structured monorepo designed to facilitate full-stack development with a focus on type safety and modularity. With 15,122 lines of code across 153 files, the project maintains a clean dependency graph with zero circular dependencies, ensuring high maintainability and predictable build cycles. The repository leverages modern tooling to manage shared logic between the backend API and the frontend web application. The project is built on a robust, type-centric ecosystem:
 
-*   **Languages:** TypeScript (Primary), JavaScript, Python (for scripting/automation), and SQL.
+*   **Core Languages**: TypeScript (46.4%) is the primary language, ensuring end-to-end type safety.
 ### Key Modules
 | Module | Purpose | Owner |
 |--------|---------|-------|
@@ -636,7 +636,7 @@ repo is a structured monorepo designed to manage both backend and frontend servi
 | `pnpm-lock.yaml` | 100.0th %ile | 5 | Ankur Soni |
 | `apps/web/src/app/(marketing)/components/step-timeline.tsx` | 99.0th %ile | 5 | Ankur Soni |
 | `apps/web/src/app/(marketing)/page.tsx` | 98.0th %ile | 6 | Ankur Soni |
-| `.claude/CLAUDE.md` | 97.0th %ile | 3 | Ankur Soni |
+| `.claude/CLAUDE.md` | 97.0th %ile | 4 | Ankur Soni |
 | `apps/api/prisma/schema.prisma` | 96.0th %ile | 3 | Ankur Soni |
 
 ### Repowise MCP Tools
