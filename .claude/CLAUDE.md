@@ -612,15 +612,15 @@ The wikis are the baseline (always available). Repowise is the upgrade (richer, 
 > (documentation, ownership, history, decisions). **Always verify against
 > actual source files before making changes** — the index may be stale.
 
-Last indexed: 2026-05-10 (commit 0ab1956). Confidence: 100%.
+Last indexed: 2026-05-10 (commit e96e4f9). Confidence: 100%.
 ### Architecture
-repo is a structured monorepo designed to facilitate seamless development across frontend and backend services. With a codebase spanning over 14,000 lines, the project emphasizes type safety and modularity, utilizing a robust configuration set to maintain high code quality. The repository is currently in an active development phase, characterized by frequent updates to the marketing-facing web components and a stable, circular-dependency-free architecture. The project leverages a modern, type-safe stack with a focus on developer experience and scalability:
+repo is a structured monorepo designed to manage both backend and frontend services within a unified workspace. With a codebase primarily driven by TypeScript (46.4%), the project emphasizes type safety and modularity. The repository is configured for high maintainability, featuring zero circular dependencies and a clean architectural separation between business logic, shared interfaces, and presentation layers. The project leverages a modern web development stack optimized for scalability and developer experience:
 
-*   **Languages:** Primarily **TypeScript** (45.3%), supplemented by JavaScript, Python, and SQL for infrastructure and data tasks.
+*   **Languages:** TypeScript (Primary), JavaScript, Python (for scripting/automation), and SQL.
 ### Key Modules
 | Module | Purpose | Owner |
 |--------|---------|-------|
-| `apps` | The apps module serves as the primary workspace for the web application's fronte | — |
+| `apps` | The apps module serves as the core workspace for the web application's frontend, | — |
 | `.claude` | The .claude module serves as the central configuration and security enforcement  | — |
 | `packages` | The packages module serves as a centralized repository for shared definitions an | — |
 ### Entry Points
@@ -633,11 +633,11 @@ repo is a structured monorepo designed to facilitate seamless development across
 **Infra:** Turborepo### Hotspots (High Churn)
 | File | Churn | 90d Commits | Owner |
 |------|-------|-------------|-------|
-| `pnpm-lock.yaml` | 100.0th %ile | 4 | Ankur Soni |
-| `apps/web/src/app/(marketing)/page.tsx` | 99.0th %ile | 5 | Ankur Soni |
-| `apps/web/src/app/(marketing)/components/step-timeline.tsx` | 97.9th %ile | 4 | Ankur Soni |
-| `apps/api/prisma/schema.prisma` | 96.9th %ile | 3 | Ankur Soni |
-| `.claude/CLAUDE.md` | 95.8th %ile | 2 | Ankur Soni |
+| `pnpm-lock.yaml` | 100.0th %ile | 5 | Ankur Soni |
+| `apps/web/src/app/(marketing)/components/step-timeline.tsx` | 99.0th %ile | 5 | Ankur Soni |
+| `apps/web/src/app/(marketing)/page.tsx` | 98.0th %ile | 6 | Ankur Soni |
+| `.claude/CLAUDE.md` | 97.0th %ile | 3 | Ankur Soni |
+| `apps/api/prisma/schema.prisma` | 96.0th %ile | 3 | Ankur Soni |
 
 ### Repowise MCP Tools
 
