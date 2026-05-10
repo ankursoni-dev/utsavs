@@ -32,7 +32,8 @@ export default function MarketingHome() {
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
             href="#waitlist"
-            className="inline-flex items-center px-8 py-3 bg-charcoal text-white font-medium rounded-[var(--radius-md)] hover:bg-charcoal/90 transition-colors text-base"
+            className="inline-flex items-center px-8 py-3 text-white font-medium rounded-[var(--radius-md)] hover:opacity-90 transition-opacity text-base"
+            style={{ backgroundColor: "var(--brand-primary)" }}
           >
             Get Early Access
           </a>

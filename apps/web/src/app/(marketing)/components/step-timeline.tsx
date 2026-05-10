@@ -394,9 +394,13 @@ export function StepTimeline() {
             <div className="flex flex-col">
               {/* Step label */}
               <span
-                className={`font-mono text-xs tracking-widest uppercase transition-colors duration-300 ${
-                  activeStep === index ? "text-charcoal" : "text-charcoal/40"
-                }`}
+                className="font-mono text-xs tracking-widest uppercase transition-colors duration-300"
+                style={{
+                  color:
+                    activeStep === index
+                      ? "var(--brand-primary)"
+                      : "rgba(26,26,26,0.4)",
+                }}
               >
                 {step.number} — {step.label}
               </span>
@@ -413,7 +417,8 @@ export function StepTimeline() {
                   <li key={bullet} className="flex items-start gap-3">
                     <span
                       aria-hidden="true"
-                      className="w-1.5 h-1.5 rounded-full bg-charcoal mt-2 shrink-0"
+                      className="w-1.5 h-1.5 rounded-full mt-2 shrink-0"
+                      style={{ backgroundColor: "var(--brand-primary)" }}
                     />
                     <span className="text-sm text-text-muted">{bullet}</span>
                   </li>
