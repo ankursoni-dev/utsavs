@@ -76,15 +76,17 @@ export class AuthService implements OnModuleInit {
   ) {
     this.otpExpiry = this.configService.get<number>('OTP_EXPIRY_SECONDS', 300);
     this.rateLimit = this.configService.get<number>('OTP_RATE_LIMIT', 5);
-    this.jwtSecret = this.configService.get<string>(
-      'JWT_SECRET',
-      'fallback-secret',
-    );
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    this.jwtSecret = isProd
+      ? this.configService.getOrThrow<string>('JWT_SECRET')
+      : this.configService.get<string>('JWT_SECRET', 'fallback-secret');
     this.jwtExpiry = this.configService.get<string>('JWT_EXPIRY', '15m');
-    this.refreshSecret = this.configService.get<string>(
-      'JWT_REFRESH_SECRET',
-      'fallback-refresh-secret',
-    );
+    this.refreshSecret = isProd
+      ? this.configService.getOrThrow<string>('JWT_REFRESH_SECRET')
+      : this.configService.get<string>(
+          'JWT_REFRESH_SECRET',
+          'fallback-refresh-secret',
+        );
     this.refreshExpiry = this.configService.get<string>(
       'JWT_REFRESH_EXPIRY',
       '30d',
@@ -139,16 +141,40 @@ export class AuthService implements OnModuleInit {
   async verifyOtp(phone: string, otp: string): Promise<AuthTokenResponseDto> {
     const normalized = normalizeIndianPhone(phone);
 
+    // Brute-force protection: block after 5 failed attempts per OTP lifecycle
+    const verifyKey = `otp_verify_attempts:${normalized}`;
+    const attempts = (await this.redis.eval(
+      AuthService.RATE_LIMIT_LUA,
+      1,
+      verifyKey,
+      this.otpExpiry,
+    )) as number;
+    if (attempts > 5) {
+      await this.redis.del(`otp:${normalized}`);
+      throw new HttpException(
+        {
+          message: 'Too many verification attempts. Request a new OTP.',
+          error: 'TOO_MANY_ATTEMPTS',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const stored = await this.redis.get(`otp:${normalized}`);
     if (stored === null) {
       throw new UnauthorizedException('OTP expired or not requested');
     }
-    if (stored !== otp) {
+    const storedBuf = Buffer.from(stored);
+    const otpBuf = Buffer.from(otp);
+    if (
+      storedBuf.length !== otpBuf.length ||
+      !crypto.timingSafeEqual(storedBuf, otpBuf)
+    ) {
       throw new UnauthorizedException('Invalid OTP');
     }
 
-    // Consume OTP (one-time use)
-    await this.redis.del(`otp:${normalized}`);
+    // Consume OTP and attempt counter (one-time use)
+    await this.redis.del(`otp:${normalized}`, verifyKey);
 
     const user = await this.prisma.user.upsert({
       where: { phone: normalized },
@@ -195,13 +221,12 @@ export class AuthService implements OnModuleInit {
 
     const { sub, jti } = payload;
 
-    const exists = await this.redis.get(`refresh:${sub}:${jti}`);
-    if (!exists) {
+    // Atomic delete — eliminates TOCTOU race where two concurrent requests
+    // both pass a get() existence check before either calls del().
+    const deleted = await this.redis.del(`refresh:${sub}:${jti}`);
+    if (deleted === 0) {
       throw new UnauthorizedException('Token revoked or already used');
     }
-
-    // Rotate: delete old, issue new
-    await this.redis.del(`refresh:${sub}:${jti}`);
 
     const user = await this.prisma.user.findUnique({ where: { id: sub } });
     if (!user) {

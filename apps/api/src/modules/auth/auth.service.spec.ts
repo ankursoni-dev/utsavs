@@ -1,4 +1,8 @@
-import { HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -8,11 +12,13 @@ import { AuthService } from './auth.service';
 import { OTP_PROVIDER } from './providers/otp-provider.interface';
 
 // Mock crypto to control OTP and UUID generation
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 jest.mock('crypto', () => ({
   ...jest.requireActual('crypto'),
   randomInt: jest.fn(() => 123456),
   randomUUID: jest.fn(() => 'test-uuid-1234'),
 }));
+/* eslint-enable @typescript-eslint/no-unsafe-return */
 
 const mockPrisma = {
   fixedOtp: {
@@ -95,8 +101,16 @@ describe('AuthService', () => {
       const result = await service.requestOtp('9876543210');
 
       expect(result).toEqual({ message: 'OTP sent', expiresIn: 300 });
-      expect(mockRedis.set).toHaveBeenCalledWith('otp:+919876543210', '123456', 'EX', 300);
-      expect(mockOtpProvider.sendOtp).toHaveBeenCalledWith('+919876543210', '123456');
+      expect(mockRedis.set).toHaveBeenCalledWith(
+        'otp:+919876543210',
+        '123456',
+        'EX',
+        300,
+      );
+      expect(mockOtpProvider.sendOtp).toHaveBeenCalledWith(
+        '+919876543210',
+        '123456',
+      );
     });
 
     it('should use fixed OTP and NOT call the provider when phone has a pinned OTP', async () => {
@@ -114,7 +128,9 @@ describe('AuthService', () => {
       mockRedis.eval.mockResolvedValue(6); // count > rateLimit (5)
       mockRedis.ttl.mockResolvedValue(3600);
 
-      await expect(service.requestOtp('9876543210')).rejects.toThrow(HttpException);
+      await expect(service.requestOtp('9876543210')).rejects.toThrow(
+        HttpException,
+      );
 
       // Verify the status code
       await expect(service.requestOtp('9876543210')).rejects.toMatchObject({
@@ -138,6 +154,7 @@ describe('AuthService', () => {
     const mockUser = { id: 'user-1', phone: '+919876543210', name: null };
 
     it('should return tokens when OTP is correct (happy path)', async () => {
+      mockRedis.eval.mockResolvedValueOnce(1); // 1st attempt — within limit
       mockRedis.get.mockResolvedValue('123456');
       mockRedis.del.mockResolvedValue(1);
       mockPrisma.user.upsert.mockResolvedValue(mockUser);
@@ -153,24 +170,45 @@ describe('AuthService', () => {
         refreshToken: 'refresh-token',
         user: { id: 'user-1', phone: '+919876543210', name: null },
       });
-      expect(mockRedis.del).toHaveBeenCalledWith('otp:+919876543210');
+      // Both OTP key and attempt counter must be deleted on success
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'otp:+919876543210',
+        'otp_verify_attempts:+919876543210',
+      );
       expect(mockPrisma.user.upsert).toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException when OTP is wrong', async () => {
+      mockRedis.eval.mockResolvedValueOnce(1); // within limit
       mockRedis.get.mockResolvedValue('999999');
 
       await expect(service.verifyOtp('9876543210', '123456')).rejects.toThrow(
         new UnauthorizedException('Invalid OTP'),
       );
+      // OTP must not be consumed on a failed verify attempt
+      expect(mockRedis.del).not.toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException when Redis returns null (OTP expired)', async () => {
+      mockRedis.eval.mockResolvedValueOnce(1); // within limit
       mockRedis.get.mockResolvedValue(null);
 
       await expect(service.verifyOtp('9876543210', '123456')).rejects.toThrow(
         new UnauthorizedException('OTP expired or not requested'),
       );
+    });
+
+    it('brute-force lockout: blocks after 5 failed attempts and kills OTP', async () => {
+      // Simulate eval returning 6 (6th attempt — exceeds the 5-attempt limit)
+      mockRedis.eval.mockResolvedValueOnce(6);
+
+      await expect(
+        service.verifyOtp('+919876543210', '000000'),
+      ).rejects.toThrow(
+        expect.objectContaining({ status: HttpStatus.TOO_MANY_REQUESTS }),
+      );
+      // OTP should be killed so attacker cannot continue guessing
+      expect(mockRedis.del).toHaveBeenCalledWith('otp:+919876543210');
     });
   });
 
@@ -182,7 +220,7 @@ describe('AuthService', () => {
 
     it('should rotate the refresh token and return a new token pair (happy path)', async () => {
       mockJwtService.verify.mockReturnValue({ sub: 'user-1', jti: 'old-jti' });
-      mockRedis.get.mockResolvedValue('1');
+      // Atomic del returns 1 — key existed and was deleted
       mockRedis.del.mockResolvedValue(1);
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       mockJwtService.sign
@@ -216,8 +254,12 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException when jti is not in Redis (revoked)', async () => {
-      mockJwtService.verify.mockReturnValue({ sub: 'user-1', jti: 'revoked-jti' });
-      mockRedis.get.mockResolvedValue(null);
+      mockJwtService.verify.mockReturnValue({
+        sub: 'user-1',
+        jti: 'revoked-jti',
+      });
+      // Atomic del returns 0 — key was already gone (revoked or race-lost)
+      mockRedis.del.mockResolvedValue(0);
 
       await expect(service.refreshTokens('revoked-token')).rejects.toThrow(
         new UnauthorizedException('Token revoked or already used'),

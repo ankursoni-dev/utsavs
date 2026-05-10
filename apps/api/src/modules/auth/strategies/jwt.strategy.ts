@@ -16,10 +16,14 @@ export interface JwtUser {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(private readonly configService: ConfigService) {
+    const isProd = configService.get<string>('NODE_ENV') === 'production';
+    const secret = isProd
+      ? configService.getOrThrow<string>('JWT_SECRET')
+      : configService.get<string>('JWT_SECRET', 'fallback-secret');
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET', 'fallback-secret'),
+      secretOrKey: secret,
     });
   }
 
