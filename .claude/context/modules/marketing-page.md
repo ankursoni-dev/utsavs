@@ -9,36 +9,40 @@ Landing page at `/` (route group `(marketing)`): acquisition page for Utsavs wit
 - **Route group**: `apps/web/src/app/(marketing)/`
 - **Renders at**: `/` (root)
 - **6 sections** (in order):
-  1. **Hero** — tagline "Your Wedding, Orchestrated", CTA buttons to #waitlist and #features, scroll indicator
-  2. **Problem** (id: `#problem`) — 3 cards (Communication Chaos, Budget Blindspots, Vendor Anxiety) with emoji, title, description
-  3. **Solution / Features** (id: `#features`) — 6 feature cards (Guest Management, Budget & Shagun, Vendor Coordination, Event Timeline, Multi-Host Collaboration, Digital Invitations) with color accent bars
-  4. **Theme Showcase** (id: `#themes`) — 6 curated themes displayed as gradient cards (royal-ivory, modern-emerald, midnight-sangeet, minimal-luxury, floral-sunset, temple-classic), scrollable on mobile, 3-column grid on desktop
-  5. **Stats** — 500+ signups, 6 themes, ∞ memories (UI-only, no analytics)
+  1. **Hero** — tagline "Stop running weddings on WhatsApp", CTA buttons to #waitlist and #how-it-works, TickerStrip of features below
+  2. **How It Works** (id: `#how-it-works`) — 4-step timeline with mock UI panels: Budget & Shagun, Vendor Command, Guest Intelligence, Themed Experiences
+  3. **Organizer Advantage** (dark charcoal section) — 3 CountUpStat cards (20-50 weddings/year, 6-15 vendors/wedding, ₹15-80L budget range)
+  4. **Theme Showcase** (id: `#themes`) — interactive carousel: select from 6 curated themes, preview card + swatch row
+  5. **Building in Public** (no id) — milestone list with checkmark/progress/coming-soon indicators (Auth & guest mgmt shipped, 6 themes shipped, Budget & shagun in progress, Vendor coordination coming soon)
   6. **Waitlist CTA** (id: `#waitlist`) — heading + form + reassurance text
 
 ## Component breakdown
 
-### Server Components (marketing group layout)
-- **`layout.tsx`** — Sticky header with logo, desktop nav links (#features, #themes), CTA button; footer with links
-- **`page.tsx`** — Root landing page; orchestrates all 6 sections, imports THEMES from shared, renders cards from inline data
+### Server Components
+- **`layout.tsx`** — Sticky header with logo, desktop nav links (#how-it-works, #themes), CTA button; footer with links
+- **`page.tsx`** — Root landing page; orchestrates all 6 sections, imports THEMES from shared
+- **`TickerStrip`** — Horizontally scrolling ticker with feature list (◆ separator); respects prefers-reduced-motion
 
 ### Client Components
-- **`WaitlistForm`** — "use client"; form with phone input (tel type, placeholder "+91 98765 43210") + submit button (variant="champagne"). Currently UI-only: on submit, shows success message ("You're on the list. 🎉"). No API call or Server Action yet.
-- **`MobileNav`** — "use client"; hamburger toggle, dropdown menu with links (#features, #themes, #waitlist), closes on navigation
-- **`ScrollIndicator`** — Static, renders animated chevron + "Scroll" label in hero section; no interaction
+- **`WaitlistForm`** — Form with phone input (tel type, placeholder "Your phone number") + submit button. UI-only: on submit, shows success message. No API call or Server Action yet.
+- **`MobileNav`** — Hamburger toggle, dropdown menu with links (#how-it-works, #themes, #waitlist), closes on navigation
+- **`StepTimeline`** — 4-step timeline with mock UI panels; viewport-triggered reveal with IntersectionObserver; center vertical line (desktop only)
+- **`CountUpStat`** — Animated count-up for integer values (or static display for non-integers); viewport-triggered animation with easeOut; respects prefers-reduced-motion
+- **`ThemeCarousel`** — Interactive theme selector with preview card (responsive size) + swatch row; selected theme controls background gradient and text color
 
 ## Theme showcase
 
-Themes are imported as `THEMES` and `THEME_NAMES` from `@/lib/themes`, which re-exports from `@repo/shared-types` (shared package). No hardcoded theme data in the page. Theme cards render dynamically with:
-- `tokens.grad` (CSS gradient from theme token map) as background
-- Theme name (kebab-case, converted to Title Case with spaces)
-- Vibe description (hardcoded mapping in `getThemeVibe()` helper)
+Themes are imported as `THEMES` and `THEME_NAMES` from `@/lib/themes`, which re-exports from `@repo/shared-types` (shared package). No hardcoded theme data in the page. ThemeCarousel renders dynamically with:
+- Selected theme controlled by useState; theme object holds `grad` (CSS gradient), `text` (text color)
+- Theme name formatted to title case (kebab-case → "Title Case")
+- Vibe description mapped in VIBES record (hardcoded English descriptions per theme)
 
 ## Navigation anchors
 
-- Desktop nav and header CTAs all use fragment links (`href="#features"`, `href="#themes"`, `href="#waitlist"`)
-- Section ids: `#problem`, `#features`, `#themes`, `#waitlist`
-- Hero has explicit buttons linking to these anchors
+- Desktop nav and header CTAs all use fragment links
+- Section ids: `#how-it-works`, `#themes`, `#waitlist`
+- Hero CTA buttons: "Get Early Access" → #waitlist, "See How It Works" → #how-it-works
+- Navigation (layout + mobile-nav) links: "How It Works" → #how-it-works, "Themes" → #themes, "Get Early Access" → #waitlist
 
 ## WaitlistForm state management
 
@@ -48,13 +52,15 @@ Form is **UI-only**: state in React (`useState` for phone value, submitted flag)
 
 ## Styling
 
-- No images; CSS gradients (`style={{ background: tokens.grad }}`), inline SVG (hamburger menu, scroll chevron, X icon), emoji only for decoration
+- No images; CSS gradients (theme.grad), inline SVG (hamburger menu, X icon), emoji only for decoration
+- TickerStrip uses CSS animation (ticker keyframe, 30s linear infinite); inline style tag
+- StepTimeline and CountUpStat use IntersectionObserver + requestAnimationFrame for scroll-triggered animations
+- ThemeCarousel uses CSS transitions for theme preview updates
 - Uses shared design tokens (via ThemeProvider in web shell)
-- Responsive: mobile-first; desktop nav hidden (<md breakpoint), footer flows to column on mobile
-- Color variables: `var(--color-emerald)`, `var(--color-champagne)`, `var(--color-charcoal)`, `var(--color-maroon)` referenced in feature cards
+- Responsive: mobile-first; desktop nav hidden (<md breakpoint), timeline center line hidden on mobile, footer flows to column
 
 ## Dependencies
 
-- `@/components/ui/*` — Display, Eyebrow, Card, CardBody, Button (from web shell)
-- `@/lib/themes` — THEMES map, THEME_NAMES array (from shared-types)
-- `next/navigation` — implicit via layout/page structure
+- `@/components/ui/*` — Display, Eyebrow, Chip, Button (from web shell)
+- `@/lib/themes` — THEMES map, THEME_NAMES array, ThemeName type (from shared-types); also imported by StepTimeline for MockInvitation panel
+- React hooks — useState, useEffect, useRef, IntersectionObserver, requestAnimationFrame (for animations and scroll-triggered reveals)
