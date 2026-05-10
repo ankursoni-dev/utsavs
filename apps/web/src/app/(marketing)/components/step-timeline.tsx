@@ -309,87 +309,67 @@ function MockInvitation() {
   );
 }
 
-const MOCK_PANELS = [MockBudget, MockVendors, MockGuests, MockInvitation];
-
 // ── Timeline ─────────────────────────────────────────────────────────────────
 
 export function StepTimeline() {
-  const [activeStep, setActiveStep] = useState(0);
-  const [visibleSteps, setVisibleSteps] = useState<Set<number>>(new Set());
+  const [activeStep, setActiveStep] = useState<number>(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const stepRefs = useRef<(HTMLDivElement | null)[]>(STEPS.map(() => null));
 
   useEffect(() => {
-    const prefersReduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (prefersReduced) {
-      setVisibleSteps(new Set(STEPS.map((_, i) => i)));
-      return;
-    }
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handleChange = (e: MediaQueryListEvent) =>
+      setReducedMotion(e.matches);
+    setReducedMotion(mq.matches);
+    mq.addEventListener("change", handleChange);
+
+    if (mq.matches) return () => mq.removeEventListener("change", handleChange);
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          const index = Number(entry.target.getAttribute("data-step"));
           if (entry.isIntersecting) {
-            setActiveStep(index);
-            setVisibleSteps((prev) => new Set(prev).add(index));
+            setActiveStep(Number(entry.target.getAttribute("data-step")));
           }
         });
       },
-      { threshold: 0.3 },
+      { threshold: 0.5 },
     );
 
     stepRefs.current.forEach((ref) => {
       if (ref) observer.observe(ref);
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      mq.removeEventListener("change", handleChange);
+    };
   }, []);
 
   return (
-    <div className="relative">
-      {/* Center line — desktop only */}
-      <div
-        aria-hidden="true"
-        className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-border -translate-x-1/2"
-      />
-
-      {STEPS.map((step, index) => {
-        const MockPanel = MOCK_PANELS[index];
-        const isVisible = visibleSteps.has(index);
-        const isActive = activeStep === index;
-
-        return (
+    <div className="relative md:grid md:grid-cols-[1fr_1fr] md:gap-16">
+      {/* Left: scrolling text column */}
+      <div>
+        {STEPS.map((step, index) => (
           <div
             key={step.number}
             ref={(el) => {
               stepRefs.current[index] = el;
             }}
             data-step={index}
-            className="min-h-[80vh] py-16 md:py-20 relative flex flex-col md:grid md:grid-cols-2 md:gap-8 md:items-center"
+            className="min-h-screen flex items-center py-16"
           >
-            {/* Step dot — desktop only */}
-            <div
-              aria-hidden="true"
-              className={`hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 z-10 transition-all duration-300 ${
-                isActive
-                  ? "bg-charcoal border-charcoal scale-125"
-                  : "bg-surface border-border"
-              }`}
-            />
-
-            {/* Text column */}
-            <div className="md:pr-12 flex flex-col">
+            <div className="flex flex-col">
               {/* Step label */}
-              <div className="flex items-center gap-2 mb-6">
-                <span aria-hidden="true" className="w-8 h-px bg-charcoal/30" />
-                <span className="font-mono text-xs tracking-widest uppercase text-charcoal/60">
-                  {step.number} — {step.label}
-                </span>
-              </div>
+              <span
+                className={`font-mono text-xs tracking-widest uppercase transition-colors duration-300 ${
+                  activeStep === index ? "text-charcoal" : "text-charcoal/40"
+                }`}
+              >
+                {step.number} — {step.label}
+              </span>
 
-              <h3 className="font-display text-3xl italic tracking-[-0.02em] leading-[1.05] text-text">
+              <h3 className="font-display text-3xl italic tracking-[-0.02em] leading-[1.05] text-text mt-6">
                 {step.headline}
               </h3>
               <p className="text-text-muted text-base leading-relaxed mt-4">
@@ -407,22 +387,58 @@ export function StepTimeline() {
                   </li>
                 ))}
               </ul>
-            </div>
 
-            {/* Mock UI panel */}
-            <div
-              aria-hidden="true"
-              className={`mt-10 md:mt-0 md:pl-12 transition-all duration-700 ease-out motion-reduce:transition-none ${
-                isVisible
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-8"
-              }`}
-            >
-              <MockPanel />
+              {/* Mobile mock panel (Approach A) */}
+              <div className="md:hidden mt-8" aria-hidden="true">
+                {index === 0 && <MockBudget />}
+                {index === 1 && <MockVendors />}
+                {index === 2 && <MockGuests />}
+                {index === 3 && <MockInvitation />}
+              </div>
             </div>
           </div>
-        );
-      })}
+        ))}
+      </div>
+
+      {/* Right: sticky mock panel column (desktop only) */}
+      <div className="hidden md:block relative">
+        {/* Decorative left border */}
+        <div
+          aria-hidden="true"
+          className="hidden md:block absolute left-0 top-0 bottom-0 w-px bg-border"
+        />
+
+        {reducedMotion ? (
+          /* Reduced-motion: vertical stack, no animation */
+          <div className="py-16 space-y-12" aria-hidden="true">
+            <MockBudget />
+            <MockVendors />
+            <MockGuests />
+            <MockInvitation />
+          </div>
+        ) : (
+          <div className="sticky top-0 h-screen flex items-center justify-center">
+            <div className="relative w-full h-full flex items-center justify-center">
+              {STEPS.map((step, index) => (
+                <div
+                  key={step.number}
+                  aria-hidden="true"
+                  className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-out ${
+                    activeStep === index
+                      ? "opacity-100 translate-y-0 pointer-events-auto"
+                      : "opacity-0 translate-y-4 pointer-events-none"
+                  }`}
+                >
+                  {index === 0 && <MockBudget />}
+                  {index === 1 && <MockVendors />}
+                  {index === 2 && <MockGuests />}
+                  {index === 3 && <MockInvitation />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
