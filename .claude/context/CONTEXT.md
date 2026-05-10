@@ -30,6 +30,7 @@
 - [shared-types](modules/shared-types.md) — @repo/shared-types: 14 shared enums + 6 theme token maps (imported by both api and web)
 - [data-model](modules/data-model.md) — Prisma 7 schema: 16 models, 14 enums, money-in-paise convention, PrismaService global injection
 - [web-shell](modules/web-shell.md) — Next.js 16 shell: Docker dev, design tokens, ThemeProvider, UI primitives, route groups
+- [marketing-page](modules/marketing-page.md) — Marketing landing page at /: 6-section acquisition page, waitlist form (UI-only), theme showcase
 
 ## Architectural decisions
 
