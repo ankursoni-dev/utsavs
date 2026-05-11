@@ -203,3 +203,151 @@ body {
     opacity: 0 !important;
   }
 }
+
+/* ── v2 motion primitives ── */
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(-1 * var(--float-amplitude, 4px)));
+  }
+}
+
+.float-element {
+  animation: float-y var(--float-duration, 4s) ease-in-out var(--float-delay, 0s) infinite;
+}
+
+/* particle-fall, .particle-container, .particle already defined above — not duplicated */
+
+/* Type-specific particle classes: carry the animation-name so inline styles stay minimal
+   and the reduced-motion block can disable them by class selector. */
+.particle-confetti {
+  border-radius: 1px;
+  animation: confetti-fall linear infinite;
+}
+
+.particle-dot {
+  border-radius: 50%;
+  animation: dot-drift linear infinite;
+  opacity: 0.4;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes dot-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.4;
+  }
+  25% {
+    transform: translate(10px, -8px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-6px, -16px);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(8px, -8px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 200ms;
+  pointer-events: none;
+}
+
+.shimmer-hover:hover::after {
+  opacity: 1;
+  animation: shimmer-sweep 600ms ease-in-out;
+}
+
+@keyframes confetti-burst {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--confetti-x), var(--confetti-y)) rotate(var(--confetti-r)) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes clip-reveal-ltr {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes clip-reveal-circle {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+  }
+  100% {
+    clip-path: circle(100% at 50% 50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-element,
+  .shimmer-hover::after,
+  .particle-confetti,
+  .particle-dot {
+    animation: none !important;
+  }
+  .shimmer-hover:hover::after {
+    opacity: 0 !important;
+  }
+  .particle-confetti,
+  .particle-dot {
+    opacity: 0 !important;
+  }
+}

@@ -2,78 +2,106 @@
 
 ## Purpose
 
-Landing page at `/` (route group `(marketing)`): acquisition page for Utsavs with 6 sections, waitlist signup, and brand-driven theme showcase. Build-time brand selection via env var; scroll-aware header; production omits dev tools.
+Landing page at `/` (route group `(marketing)`): cinematic v2 acquisition page with 12 sections, motion primitives library, ambient background layer, and brand-driven theming. Each section orchestrates scroll-triggered reveals and animated charts. v1 preserved at `/v1` route group.
 
 ## Route and structure
 
-- **Route group**: `apps/web/src/app/(marketing)/`
-- **Renders at**: `/` (root)
-- **6 sections** (in order):
-  1. **Hero** — headline "From chaos to command.", body copy about managing guests/budgets/vendors, CTA buttons to #waitlist and #how-it-works, radial gradient background with brand-primary color
-  2. **How It Works** (id: `#how-it-works`) — 4-step sticky-scroll timeline: Budget & Shagun, Vendor Command, Guest Intelligence, Themed Experiences. Desktop: left column scrolls, right column sticky. Progress line (4 dots + connectors) fills with brand-primary color based on scroll position
-  3. **Organizer Advantage** (dark charcoal section) — 3 CountUpStat cards (20-50 weddings/year, 6-15 vendors/wedding, ₹15-80L budget range)
-  4. **Theme Showcase** (id: `#themes`) — interactive carousel: select from 6 curated themes, preview card + swatch row with adaptive text color based on gradient luminance
-  5. **Building in Public** (no id) — milestone list with checkmark/progress/coming-soon indicators
-  6. **Waitlist CTA** (id: `#waitlist`) — heading + form + reassurance text
+- **Route group**: `apps/web/src/app/(marketing)/` renders at `/` (root)
+- **Route group**: `apps/web/src/app/(marketing-v1)/v1/` renders at `/v1` (legacy, see "Legacy v1" below)
+- **v2 page structure — 12 sections** (in order):
+  1. **HeroCinematic** — dark full-viewport hero with cinematic word-by-word headline reveal, golden particles, scroll chevron, atmospheric gradient depth. Headline: "From chaos to command."
+  2. **CommandDashboard** (id: `#how-it-works`) — product reveal inside macOS-style browser frame (desktop only; mobile stacked). 3 metric cards (Budget ring, Guest segmented bar, Vendor status dots), animated timeline strip, shagun card, invite preview.
+  3. **SplitBudget** — text LEFT, animated bar chart RIGHT (5 budget categories with 0→pct% fill).
+  4. **SplitVendor** — table LEFT (data-loading row stagger, risk-dot pulse), text RIGHT, dark bg, layout FLIPped via md:order-*. Mobile: text first, table below.
+  5. **WhatsAppLayer** — dark charcoal strip with 3 mock WhatsApp chat bubbles (sent/received), animated typing dots, quick-reply chips. Tagline: "342 guests coordinated. Zero missed messages."
+  6. **GuestIntelligence** — clip-reveal stats strip, spring-scatter tag cloud, SVG arc-draw donut chart, rotating live RSVP feed (3s interval via setInterval).
+  7. **MemoriesGallery** — warm bg-bg-alt section. 7 photo placeholder boxes with gradient tints (champagne/rose/beige) in responsive 3/4-col grid; one featured 2-row span. Spring scatter entrance, ambient float per box. Feature chip row below.
+  8. **ThemeImmersive** (id: `#themes`) — full-bleed gradient with 2-layer crossfade, 3D rotateY card flip on theme change, 6 swatches. Replaced clip-path entrance with opacity+scale fallback.
+  9. **MetricsRibbon** — dark ribbon with opacity+scale entrance, 3 useCountUp stats, golden particles. Replaced clip-reveal-ltr with opacity+scale fallback.
+  10. **RelationshipLedger** — dark mysterious teaser (`#0A0A0A`). 11-node SVG constellation graph with 16 hard-coded edges, distance-from-center stagger reveal. "Coming 2026" tagline.
+  11. **BuildingPublic** — vertical timeline with line-draw animation up to in-progress node. 5 milestones (2 shipped, 1 in-progress with pulse-ring, 2 coming-soon).
+  12. **CtaGravity** (id: `#waitlist`) — full-viewport dark CTA. Headline: "Indian weddings were never meant to run on spreadsheets and chaos." Stat counter strip, faint dashboard silhouette background. Perpetual radial gradient pulse, UI-only waitlist form, conditional confetti ParticleField on submit.
 
 ## Component breakdown
 
 ### Server Components
-- **`layout.tsx`** — Renders child layout, footer with links; header moved to MarketingHeader
-- **`page.tsx`** — Root landing page; orchestrates all 6 sections, imports THEMES from shared
-- **`TickerStrip`** — Horizontally scrolling ticker with feature list (◆ separator); respects prefers-reduced-motion
+- **`layout.tsx`** — Wraps v2 page in BrandProvider, V2Header, V2Footer, BrandSwitcher. Renders children into `<main>` block.
+- **`page.tsx`** — Mounts AmbientLayer once at top, then assembles 12 v2 sections in sequence with SectionBridge color-transition divs between sections (HeroCinematic → CtaGravity).
 
-### Client Components
-- **`FadeInSection`** (NEW) — Scroll-triggered fade-in wrapper component. IntersectionObserver (threshold 0.2) detects when child enters viewport; plays entrance animation once (unobserves after first trigger). Supports optional `delay` (ms) for staggered entrance. Transition: `opacity-0 translate-y-8` → `opacity-100 translate-y-0` over 700ms. Respects `prefers-reduced-motion`.
-- **`GoldenParticles`** (NEW) — Decorative animated golden particles (20 absolutely-positioned spans) behind dark sections. Uses `useEffect` + `Math.random()` to generate random positions/sizes/durations (no useMemo, respects project's lint rules). Animated via CSS `@keyframes particle-fall` (translateY -10vh → +110vh with rotation; per-particle duration randomized 6–14s via inline style). `aria-hidden="true"`. Respects `prefers-reduced-motion`.
-- **`MarketingHeader`** — Sticky client header with logo + right-side nav group (How It Works, Themes links + CTA button together). On scroll past 100px, inner container expands: `maxWidth` 72rem → 100%, `paddingX` 1.5rem → 2rem (spreads to extremes). Header background: transparent → `rgba(247,245,242,0.85)` + `blur(12px)`. All transitions 500ms.
-- **`WaitlistForm`** — Form with phone input (tel type, placeholder "Your phone number") + submit button (brand-colored). Submit button: `shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.97]` (200ms transitions). UI-only: on submit, shows success message. No API call or Server Action yet.
-- **`MobileNav`** — Hamburger toggle, dropdown menu with links (#how-it-works, #themes, #waitlist), closes on navigation
-- **`BrandSwitcher`** (dev-only) — Floating switcher for theme selection (4 buttons). Returns `null` when `NODE_ENV !== 'development'`. Dead-codes in production builds. Shows "DEV" label when visible.
-- **`StepTimeline`** — Sticky-scroll 4-step timeline using framer-motion entrance animations. **NEW: scroll-driven progress line** with separate `scrollProgress` state (passive scroll listener, respects `reducedMotion`). Progress: gray track + brand-colored fill (height = scrollProgress * 100%) + 4 dots at `(index/(STEPS.length-1))*100%` that fill once scrollProgress reaches them. Fill uses `transition-none` for scroll precision; dots use `transition-all duration-300`. IntersectionObserver (threshold 0.5) on `data-step` still drives `activeStep` for mock panel crossfade (independent of progress line). Desktop: left column scrolls, right column sticky. Mock panels (MockBudget, MockVendors, MockGuests, MockInvitation) accept `{ isActive: boolean; prefersReduced: boolean }`. MockBudget extracts `MockBudgetAnimated` (hooks-only component) to avoid framer-motion hook calls when `prefersReduced=true`. Counter uses `controlsRef` to stop prior animation before starting new one. Panel animations: MockBudget (container fade+slideUp → header/chip stagger → progress bars width fill → counter ₹0→₹8,42,000), MockVendors (container fade+slideUp → vendor rows slide in from the left), MockGuests (container fade → import bar drops in with "247 imported ✓" check → table header → guest rows stagger up → footer fades), MockInvitation (card scale+fade → eyebrow → couple name fade+scale → date/location → event rows stagger → action pills pop → caption fades in last). See source for exact timing.
-- **`CountUpStat`** — Animated count-up with range support via `parseValue()` regex (`^([^\d]*?)(\d+)(?:\s*[-–]\s*(\d+))?([^\d]*)$`). Captures prefix/from/to/suffix. Animates both numbers from 0 to target via easeOut. Threshold 0.3. Examples: "20-50", "6-15", "₹15-80L". `parsedRef.current` synced at top of useEffect to avoid stale ref. Respects `prefers-reduced-motion`.
-- **`ThemeCarousel`** — Interactive theme selector with preview card + swatch row. **NEW: two-layer gradient crossfade** — framer-motion can't tween CSS gradient strings, so previous gradient animates opacity 1→0 for 600ms while new gradient sits beneath at full opacity. previousGrad state clears after 700ms. Inner content uses `<AnimatePresence mode="wait">` keyed on `selected` for fade+y crossfade. Swatches are `motion.button` with whileHover/whileTap/spring scale + boxShadow. Includes `getGradientTextColor()` helper that parses gradient hex, computes luminance, returns light or dark text. Frosted card bg also adapts. _(Note: same helper exists in StepTimeline — DRY duplication, not yet extracted.)_
+### v2 Client Components & Motion Primitives
+**Shell:**
+- **`V2Header`** (sticky, client) — Scroll-driven width expansion (maxWidth 72rem→100%, padding widens), text color adapts white→charcoal on scroll past 100px, frosted glass background. Single right-side flex group with nav links + CTA.
+- **`V2Footer`** (server) — Minimal dark footer: logo, tagline, copyright, social links.
+- **`V2MobileNav`** (client) — Hamburger + portal-rendered overlay (createPortal to document.body). Mount-guarded via useSyncExternalStore. Body scroll lock when open.
 
-## Theme showcase
+**Motion Primitives Library** (`apps/web/src/app/(marketing)/components/v2/motion/`):
+1. **`useScrollReveal(options)`** — IntersectionObserver hook (generic over HTMLElement). Options: `threshold`, `delay`, `triggerOnce`, `rootMargin`. Returns `{ ref, isVisible }`. Respects `useReducedMotion()`.
+2. **`useCountUp(value, options)`** — Animated count-up via framer-motion. Handles integers, ranges, currency with regex parser. Generic over HTMLElement. Respects `useReducedMotion()`.
+3. **`useParallax(options)`** — Scroll-linked translateY via framer-motion useScroll/useTransform. Does NOT enforce reduced-motion (consumer guards).
+4. **`TextReveal`** — Word/character/center directional reveal via framer-motion variants. Props: `text`, `as`, `mode` ('word'|'character'), `stagger`, `delay`, `direction` ('up'|'left'|'right'|'center'), `triggerOnVisible`, `threshold`.
+5. **`MagneticHover`** — Cursor-following spring displacement (max 8px).
+6. **`StaggerChildren`** — Directional staggered reveal wrapper.
+7. **`FloatingElement`** — CSS @keyframes float-y ambient float (zero JS cost). Respects `prefers-reduced-motion`.
+8. **`ParticleField`** — Leaves/confetti/dots variants with stable random seed via useEffect (NOT useMemo per react-hooks purity rule). Cleanup on unmount.
+9. **`AmbientLayer`** — Fixed full-viewport layer with two drifting radial-gradient orbs (brand-primary 3%, champagne 2%) parallaxing with scroll. Mounted once at top of page behind all sections (`z-0`). Respects `useReducedMotion()`.
+10. **`SectionBridge`** — Pure Server Component markup. Gradient transition div between sections, props: `fromColor`, `toColor`, `height`. No motion; renders thin linear-gradient strip.
 
-Themes are imported as `THEMES` and `THEME_NAMES` from `@/lib/themes`, which re-exports from `@repo/shared-types` (shared package). No hardcoded theme data in the page. ThemeCarousel renders dynamically with:
-- Selected theme controlled by useState; theme object holds `grad` (CSS gradient), `text` (text color)
-- Theme name formatted to title case (kebab-case → "Title Case")
-- Vibe description mapped in VIBES record (hardcoded English descriptions per theme)
+**Section Components:**
+- **`HeroCinematic`** — Dark hero with 3-layer atmospheric gradient depth, golden particles, TextReveal word-by-word headline, scroll chevron cue. Typography breathing + CTA glow pulse persistent animation.
+- **`CommandDashboard`** — Browser frame container, metric cards (Budget/Guest/Vendor), timeline strip, sample shagun/invite cards. Desktop: frame visible; mobile: stacked content.
+- **`SplitBudget`** — Animated bar chart (5 categories, 0→pct% fill) RIGHT; text content LEFT.
+- **`SplitVendor`** — Vendor risk table (row stagger on mount, risk-dot pulse) LEFT; text RIGHT. Layout FLIPped on mobile via `md:order-*`.
+- **`WhatsAppLayer`** — Dark strip with 3 mock WhatsApp chat bubbles (sent/received directional fade-slide), typing indicator dots (bounce loop), quick-reply chips. Tagline callout.
+- **`GuestIntelligence`** — Clip-reveal stats strip, spring-scatter tag cloud (stable seed, NOT Math.random), SVG donut chart with arc-draw entrance, rotating RSVP feed (3s setInterval).
+- **`MemoriesGallery`** — Warm bg-bg-alt section. 7 photo boxes (3 gradient tints: champagne/rose/beige) in responsive 3/4-col grid; one featured 2-row span. Spring scatter entrance, ambient float per box, feature chip row.
+- **`ThemeImmersive`** — Full-bleed theme gradient (2-layer opacity crossfade for tween workaround), 3D rotateY card flip on selection, 6 theme swatches. Uses opacity+scale entrance (replaced clip-path to avoid permanent-invisible bug).
+- **`MetricsRibbon`** — Dark ribbon section with opacity+scale entrance (replaced clip-reveal-ltr), 3 `useCountUp` stats (extracted to `StatBlockAnimated`), golden ParticleField.
+- **`RelationshipLedger`** — Dark mysterious teaser. 11-node SVG constellation graph with 16 hard-coded edges. Distance-from-center stagger reveal. "Coming 2026" tagline.
+- **`BuildingPublic`** — Vertical milestone timeline with line-draw animation. Node states: checkmark (shipped), pulse-ring (in-progress), coming-soon badge.
+- **`CtaGravity`** — Full-viewport dark CTA. TextReveal headline (center direction), stat counter strip (342 guests, ₹22L lakhs, 12 vendors), faint dashboard silhouette background (6% opacity). Perpetual radial gradient pulse (6-12% opacity range), UI-only waitlist form, conditional confetti ParticleField on submit.
 
-## Navigation anchors
-
-- Desktop nav and header CTAs all use fragment links
-- Section ids: `#how-it-works`, `#themes`, `#waitlist`
-- Hero CTA buttons: "Get Early Access" → #waitlist, "See How It Works" → #how-it-works
-- Navigation (layout + mobile-nav) links: "How It Works" → #how-it-works, "Themes" → #themes, "Get Early Access" → #waitlist
-
-## WaitlistForm state management
-
-Form is **UI-only**: state in React (`useState` for phone value, submitted flag). On submit, prevents default, sets submitted flag to render success message. No persistence, no API call.
-
-## Styling
-
-- No images; CSS gradients (theme.grad), inline SVG (hamburger menu, X icon), emoji only for decoration
-- TickerStrip uses CSS animation (ticker keyframe, 30s linear infinite); inline style tag
-- **Particles**: `.particle-container` (absolute inset) + `.particle` spans with `@keyframes particle-fall` (translateY + rotate 720deg; duration set per-particle via inline style). `@media (prefers-reduced-motion: reduce)` disables animation + opacity.
-- **Button hover system**: Primary CTAs get `shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 cursor-pointer`. Outline CTAs get `hover:shadow-md hover:scale-[1.02] active:scale-[0.98]` + `.btn-outline-hover` (CSS class that adds 5% brand-tint background via `color-mix(in srgb, var(--brand-primary) 5%, transparent)` on hover). Header CTA uses smaller `hover:shadow-lg`.
-- **FadeInSection**: opacity + translateY transitions (duration-700) with motion-reduce suppression. Initial: `opacity-0 translate-y-8`. End: `opacity-100 translate-y-0`.
-- StepTimeline and CountUpStat use IntersectionObserver + requestAnimationFrame for scroll-triggered animations
-- ThemeCarousel uses framer-motion for gradient layer crossfade + inner content fade
-- Uses shared design tokens (via BrandProvider in marketing layout)
-- Responsive: mobile-first; desktop nav hidden (<md breakpoint), timeline center line hidden on mobile, footer flows to column
+**Key architectural patterns:**
+- **AmbientLayer + SectionBridge**: Fixed full-viewport orb layer parallaxes behind all sections (`z-0`). SectionBridge divs inject thin gradient strips between sections to smooth dark-to-light color transitions. Eliminates jarring jumps.
+- **Entrance animation fallback**: ThemeImmersive and MetricsRibbon moved from clip-path (`circle(0%)` permanent-invisible bug) to opacity+scale entrance. No permanent-invisible failure mode if IntersectionObserver fires before ref attaches.
+- **No JSX-variable double-mount**: each section uses single render path with responsive Tailwind for mobile/desktop differences (avoids hydration/hook bugs).
+- **Hydration safety**: all `typeof window && matchMedia(...)` replaced with framer-motion `useReducedMotion()` hook. No Math.random in lazy useState initializers; stable seed offsets for entrance animations (MemoriesGallery STABLE_ENTRY array, RelationshipLedger fixed node/edge layout).
+- **`useCountUp` parser**: handles integers, ranges, currency suffixes — but animates only leading numbers (e.g., "₹15-80L" animates "15" only; suffix static). Used where numeric part is clean; static text fallback elsewhere.
 
 ## Brand system
 
-- **`apps/web/src/lib/brand.ts`** (NEW) — exports `getActiveBrand()` that reads `process.env.NEXT_PUBLIC_BRAND`, falls back to `'plum'`. Returns `ACTIVE_BRAND` (string) and `brand` (config object). Next.js inlines `NEXT_PUBLIC_*` at build time, so brand is compile-time constant.
-- **`NEXT_PUBLIC_BRAND` env var** — values: `plum | wine | sapphire | teal`. Evaluated at build time. Default: `plum`. Sets CSS custom properties via BrandProvider; components reference `var(--brand-primary)`, `var(--brand-light)`, `var(--brand-lighter)`, and `var(--brand-text)`.
-- **`BrandSwitcher` dev-only** — in production, returns `null`. In development, provides floating widget to switch themes at runtime (for dev iteration). Dead-codes in production builds.
+- **`BrandProvider`** — Relocated to `apps/web/src/components/providers/brand-provider.tsx`. Injects CSS custom properties (--brand-primary, --brand-light, --brand-lighter, --brand-text) at runtime based on `NEXT_PUBLIC_BRAND` env var.
+- **`BrandSwitcher`** — Relocated to `apps/web/src/components/providers/brand-switcher.tsx`. Dev-only floating widget; returns `null` in production. Allows runtime theme switching during development.
+- **`NEXT_PUBLIC_BRAND` env var** — Values: `plum | wine | sapphire | teal`. Evaluated at build time. Default: `plum`. Next.js inlines the value, so brand is a compile-time constant.
+- **Theme data** — THEMES map + THEME_NAMES array imported from `@/lib/themes` (re-exported from `@repo/shared-types` shared package).
+
+## Navigation anchors
+
+- Fragment links: `#how-it-works`, `#themes`, `#waitlist`
+- V2Header nav group: "How It Works" → #how-it-works, "Themes" → #themes, "Get Early Access" → #waitlist
+- HeroCinematic CTAs: "Watch It Work ↓" → #how-it-works, "Get Early Access" → #waitlist
+
+## Styling
+
+- No images; CSS gradients (theme.grad, immersive gradients), inline SVG icons, emoji decoration only
+- New keyframes in globals.css: `float-y`, `confetti-fall`, `dot-drift`, `shimmer-sweep`, `confetti-burst`, `pulse-ring`, `clip-reveal-ltr`, `clip-reveal-circle`
+- New classes: `.float-element`, `.shimmer-hover`, `.particle-confetti`, `.particle-dot`
+- All motion classes extended with `@media (prefers-reduced-motion: reduce)` suppression block
+- Button system: primary CTAs get `shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-[0.97] transition-all duration-200`. Outline CTAs get `hover:scale-[1.02]` with color-mix bg tint.
+- Responsive: mobile-first; desktop-only elements (CommandDashboard browser frame) hidden on mobile via Tailwind `hidden md:block`
+
 
 ## Dependencies
 
-- **Runtime**: `framer-motion ^12.38.0` (entrance animations in StepTimeline mock panels, ThemeCarousel gradient crossfade + swatch animations, counter animation via `useMotionValue` + `useMotionTemplate`)
-- `@/components/ui/*` — Display, Eyebrow, Chip, Button (from web shell)
-- `@/lib/themes` — THEMES map, THEME_NAMES array, ThemeName type (from shared-types); also imported by StepTimeline for MockInvitation panel and ThemeCarousel for theme data
-- `@/lib/brand` — ACTIVE_BRAND, brand config (for brand-driven styling)
-- React hooks — useState, useEffect, useRef, useLayoutEffect, useCallback, IntersectionObserver, matchMedia (for scroll-aware header, timeline, animations, particle generation)
+- **Runtime**: `framer-motion ^12.38.0` (all motion primitives, section animations, scroll transforms, useReducedMotion detection)
+- `@/components/providers/*` — BrandProvider, BrandSwitcher (relocated from marketing layout)
+- `@/lib/themes` — THEMES, THEME_NAMES, ThemeName type (from shared-types)
+- `@/lib/utils` — cn() helper (Tailwind class merge)
+- React hooks — useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore (MobileNav mount guard), IntersectionObserver, requestAnimationFrame
+
+## Legacy v1
+
+v1 of this page is preserved at `/v1` route group (`apps/web/src/app/(marketing-v1)/v1/`). Components:
+- `page.tsx`, `layout.tsx` — v1 page structure (6 sections: Hero, StepTimeline, CountUpStat, ThemeCarousel, BuildingPublic, Waitlist)
+- `components/` — FadeInSection, GoldenParticles, MarketingHeader, MobileNav, WaitlistForm, CountUpStat, ThemeCarousel, TickerStrip, StepTimeline
+
+v1 remains fully functional for reference or A/B testing. No active development; changes should target v2 sections in `(marketing)/` instead.
