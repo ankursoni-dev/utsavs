@@ -11,6 +11,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { scrollToHash } from './motion/scroll-to';
 
 interface V2MobileNavProps {
   /** Controls hamburger icon colour: white when not scrolled, charcoal when scrolled. */
@@ -117,7 +118,12 @@ export function V2MobileNav({ scrolled }: V2MobileNavProps) {
                 variants={linkVariants}
                 initial="hidden"
                 animate="visible"
-                onClick={() => setIsOpen(false)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsOpen(false);
+                  // Small delay so overlay exit animation doesn't fight scroll
+                  setTimeout(() => scrollToHash(link.href.replace('#', '')), 50);
+                }}
                 className="text-white text-3xl font-display tracking-tight hover:opacity-70 transition-opacity duration-200 cursor-pointer"
               >
                 {link.label}

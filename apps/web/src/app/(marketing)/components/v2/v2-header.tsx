@@ -3,18 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { V2MobileNav } from './v2-mobile-nav';
-
-function handleAnchorClick(e: React.MouseEvent<HTMLAnchorElement>, hash: string) {
-  e.preventDefault();
-  const target = document.getElementById(hash);
-  if (!target) return;
-  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const rect = target.getBoundingClientRect();
-  const NAVBAR_OFFSET = 64; // matches h-16 on the navbar container
-  const targetTop = window.scrollY + rect.top - NAVBAR_OFFSET;
-  window.scrollTo({ top: targetTop, behavior: prefersReduced ? 'auto' : 'smooth' });
-  window.history.replaceState(null, '', `#${hash}`);
-}
+import { handleAnchorClick } from './motion/scroll-to';
 
 /**
  * V2Header — Dynamic Island–style floating pill navbar with scroll-expand.
