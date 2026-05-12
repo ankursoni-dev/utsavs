@@ -101,13 +101,6 @@
 
 html {
   scroll-behavior: smooth;
-  /* Dark overscroll bounce — hero and CTA are dark, so this matches both ends. */
-  background-color: #0a0a0a;
-  overflow-x: hidden;
-}
-
-body {
-  overflow-x: hidden;
 }
 
 /*
