@@ -31,9 +31,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="en"
-      className={`${marcellus.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${marcellus.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}
     >
-      <body className="bg-bg text-text min-h-full">{children}</body>
+      <body className="bg-bg text-text min-h-screen">{children}</body>
     </html>
   );
 }
