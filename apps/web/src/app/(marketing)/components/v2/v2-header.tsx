@@ -1,27 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { V2MobileNav } from './v2-mobile-nav';
 import { handleAnchorClick } from './motion/scroll-to';
 
 /**
- * V2Header — Dynamic Island–style floating pill navbar with scroll-expand.
+ * V2Header — sticky full-width header with theme-adaptive glass.
  *
  * Behavior:
- * - Starts as a compact centered pill over the hero
- * - Once the user scrolls past the hero heading (~500px), the pill expands
- *   horizontally toward the edges so logo/buttons don't cover section content
- * - Detects dark/light sections via IntersectionObserver on [data-nav-theme]
- * - Smoothly transitions bg + text color to match current section
- * - "Themes" nav link removed; only "How It Works" remains (shorter)
+ * - Sticky at top, takes layout space (content does not slide under it).
+ * - Transparent when over the hero / dark sections.
+ * - Frosted glass background once scrolled, color-adapted to the current section
+ *   via IntersectionObserver on [data-nav-theme].
  */
 export function V2Header() {
-  const headerRef = useRef<HTMLElement>(null);
   const [isDark, setIsDark] = useState(true);
-  const [expanded, setExpanded] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  // ── Section theme observer ────────────────────────────────────────────────
+  // ── Section theme observer (dark vs light) ───────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
       const sections = document.querySelectorAll<HTMLElement>('[data-nav-theme]');
@@ -59,51 +56,56 @@ export function V2Header() {
     return () => clearTimeout(timer);
   }, []);
 
-  // ── Scroll-expand: expand when past hero heading ──────────────────────────
+  // ── Scroll state: solid bg + border once past ~50px ──────────────────────
   useEffect(() => {
     function handleScroll() {
-      // Expand once scrolled past ~400px (roughly past the hero heading)
-      setExpanded(window.scrollY > 400);
+      setScrolled(window.scrollY > 50);
     }
-
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Check initial position
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const textColor = isDark ? '#FFFFFF' : 'var(--color-charcoal)';
 
+  // Background opacity: 0 when over hero (transparent), full when scrolled
+  const bgColor = scrolled
+    ? isDark
+      ? 'rgba(10, 10, 10, 0.72)'
+      : 'rgba(247, 245, 242, 0.78)'
+    : 'transparent';
+
+  const borderColor = scrolled
+    ? isDark
+      ? 'rgba(255, 255, 255, 0.08)'
+      : 'rgba(0, 0, 0, 0.06)'
+    : 'transparent';
+
   return (
     <header
-      ref={headerRef}
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-700 ease-out"
+      className="sticky top-0 z-50 w-full transition-all duration-300 ease-out"
       style={{
-        width: expanded ? 'calc(100% - 2rem)' : 'min(calc(100% - 2rem), 600px)',
-        maxWidth: expanded ? '72rem' : '38rem',
-        borderRadius: '9999px',
-        backgroundColor: isDark
-          ? 'rgba(10, 10, 10, 0.72)'
-          : 'rgba(247, 245, 242, 0.68)',
-        backdropFilter: 'blur(20px) saturate(1.6)',
-        WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
-        border: isDark
-          ? '1px solid rgba(255,255,255,0.08)'
-          : '1px solid rgba(0,0,0,0.06)',
-        boxShadow: isDark
-          ? '0 4px 30px rgba(0,0,0,0.25)'
-          : '0 4px 24px rgba(0,0,0,0.06)',
+        backgroundColor: bgColor,
+        backdropFilter: scrolled ? 'blur(16px) saturate(1.5)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(16px) saturate(1.5)' : 'none',
+        borderBottom: `1px solid ${borderColor}`,
+        boxShadow: scrolled
+          ? isDark
+            ? '0 1px 12px rgba(0,0,0,0.25)'
+            : '0 1px 12px rgba(0,0,0,0.04)'
+          : 'none',
       }}
     >
-      <div className="h-12 flex items-center justify-between px-6">
+      <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className="font-display text-xl tracking-tight transition-colors duration-700"
+          className="font-display text-2xl tracking-tight transition-colors duration-300"
           style={{ color: textColor }}
         >
           utsavs
         </Link>
 
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-8">
           <a
             href="#how-it-works"
             className="text-sm hover:opacity-70 transition-all duration-300"
@@ -114,7 +116,7 @@ export function V2Header() {
           </a>
           <a
             href="#waitlist"
-            className="inline-flex items-center px-4 py-1.5 text-white text-sm font-medium rounded-full shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.97] transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-full shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.97] transition-all duration-200 cursor-pointer"
             style={{ backgroundColor: 'var(--brand-primary)' }}
             onClick={(e) => handleAnchorClick(e, 'waitlist')}
           >
