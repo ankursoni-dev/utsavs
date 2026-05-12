@@ -12,7 +12,6 @@ import { BuildingPublic } from './components/v2/building-public';
 import { CtaGravity } from './components/v2/cta-gravity';
 import { AmbientLayer } from './components/v2/motion/ambient-layer';
 import { SectionBridge } from './components/v2/motion/section-bridge';
-
 export default function MarketingV2Page() {
   return (
     <>
