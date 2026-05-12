@@ -106,11 +106,7 @@ function LedgerCard({
     <motion.div
       className="rounded-xl p-5 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.07] transition-colors duration-300"
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
-      animate={
-        inView
-          ? { opacity: 1, y: 0, scale: 1 }
-          : { opacity: 0, y: 30, scale: 0.95 }
-      }
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 30, scale: 0.95 }}
       transition={{
         duration: 0.6,
         delay: 0.3 + index * 0.12,
@@ -144,8 +140,10 @@ function LedgerCard({
       {/* Subtle pulse line at bottom */}
       <motion.div
         className="mt-4 h-px rounded-full"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(200,169,107,0.3), transparent)' }}
-        animate={inView ? { opacity: [0.3, 0.7, 0.3] } : { opacity: 0 }}
+        style={{
+          background: 'linear-gradient(90deg, transparent, rgba(200,169,107,0.3), transparent)',
+        }}
+        animate={inView ? { opacity: [0.3, 0.7, 0.3] } : false}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: index * 0.5 }}
       />
     </motion.div>
@@ -196,8 +194,15 @@ function TimelineDot({
         }}
         animate={
           isLast && inView
-            ? { scale: [1, 1.4, 1], boxShadow: ['0 0 0 0 rgba(124,45,110,0)', '0 0 0 8px rgba(124,45,110,0.3)', '0 0 0 0 rgba(124,45,110,0)'] }
-            : {}
+            ? {
+                scale: [1, 1.4, 1],
+                boxShadow: [
+                  '0 0 0 0 rgba(124,45,110,0)',
+                  '0 0 0 8px rgba(124,45,110,0.3)',
+                  '0 0 0 0 rgba(124,45,110,0)',
+                ],
+              }
+            : false
         }
         transition={isLast ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
       />
@@ -223,7 +228,10 @@ function TimelineDot({
  */
 export function RelationshipLedger() {
   const prefersReduced = useReducedMotion() ?? false;
-  const { ref, isVisible: inView } = useScrollReveal({ threshold: 0.15 });
+  const { ref, isVisible: inView } = useScrollReveal({
+    threshold: 0.2,
+    rootMargin: '0px 0px -5% 0px',
+  });
 
   return (
     <section
@@ -279,6 +287,7 @@ export function RelationshipLedger() {
                 triggerOnVisible={true}
                 threshold={0.15}
                 className="font-display text-2xl md:text-3xl text-white/90 mt-4 max-w-2xl mx-auto leading-relaxed"
+                parentInView={inView}
               />
 
               <motion.p
@@ -313,12 +322,18 @@ export function RelationshipLedger() {
           {prefersReduced ? (
             <div
               className="absolute top-[28px] left-[50px] right-[50px] h-px"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(200,169,107,0.2), transparent)' }}
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent, rgba(200,169,107,0.2), transparent)',
+              }}
             />
           ) : (
             <motion.div
               className="absolute top-[28px] left-[50px] right-[50px] h-px"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(200,169,107,0.2), transparent)' }}
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent, rgba(200,169,107,0.2), transparent)',
+              }}
               initial={{ scaleX: 0 }}
               animate={inView ? { scaleX: 1 } : { scaleX: 0 }}
               transition={{ duration: 0.8, delay: 0.5, ease: EASE_CINEMATIC }}

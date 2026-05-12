@@ -573,10 +573,7 @@ function InviteCard() {
  */
 export function CommandDashboard() {
   const prefersReduced = useReducedMotion() ?? false;
-  const { ref: sectionRef, isVisible: inView } = useScrollReveal({
-    threshold: 0.1,
-    triggerOnce: false,
-  });
+  const { ref: sectionRef, isVisible: inView } = useScrollReveal({ threshold: 0.1 });
 
   // ── Activity feed state ────────────────────────────────────────────────────
   const [activities, setActivities] = useState<ActivityEntry[]>(INITIAL_ACTIVITIES);

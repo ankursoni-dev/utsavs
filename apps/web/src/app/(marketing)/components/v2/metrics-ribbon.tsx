@@ -15,7 +15,15 @@ const STATS = [
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function StatBlockAnimated({ value, label, delay }: { value: string; label: string; delay: number }) {
+function StatBlockAnimated({
+  value,
+  label,
+  delay,
+}: {
+  value: string;
+  label: string;
+  delay: number;
+}) {
   const { displayValue, ref } = useCountUp<HTMLSpanElement>(value, {
     duration: 1600,
     delay,
@@ -80,17 +88,23 @@ function StatBlock({
 export function MetricsRibbon() {
   const prefersReduced = useReducedMotion() ?? false;
   const { ref: sectionRef, isVisible: inView } = useScrollReveal({
-    threshold: 0.2,
-    triggerOnce: false,
+    threshold: 0.25,
+    rootMargin: '0px 0px -5% 0px',
   });
 
   // ── Reduced-motion static branch ───────────────────────────────────────────
   if (prefersReduced) {
     return (
-      <section data-nav-theme="dark" className="relative z-10 bg-[#1A1A1A] text-white py-8 md:py-12 px-6 overflow-hidden">
+      <section
+        data-nav-theme="dark"
+        className="relative z-10 bg-[#1A1A1A] text-white py-8 md:py-12 px-6 overflow-hidden"
+      >
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-around gap-8 md:gap-0">
           {STATS.map((stat, i) => (
-            <div key={stat.value} className="flex flex-col md:flex-row items-center w-full md:w-auto">
+            <div
+              key={stat.value}
+              className="flex flex-col md:flex-row items-center w-full md:w-auto"
+            >
               <StatBlock value={stat.value} label={stat.label} delay={0} reduced={true} />
               {/* Divider between items */}
               {i < STATS.length - 1 && (
@@ -126,12 +140,7 @@ export function MetricsRibbon() {
       <div className="relative z-10 max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-around gap-8 md:gap-0">
         {STATS.map((stat, i) => (
           <div key={stat.value} className="flex flex-col md:flex-row items-center w-full md:w-auto">
-            <StatBlock
-              value={stat.value}
-              label={stat.label}
-              delay={i * 300}
-              reduced={false}
-            />
+            <StatBlock value={stat.value} label={stat.label} delay={i * 300} reduced={false} />
 
             {/* Divider — grows from zero when section enters view */}
             {i < STATS.length - 1 && (

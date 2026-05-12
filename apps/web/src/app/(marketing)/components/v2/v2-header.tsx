@@ -34,8 +34,7 @@ export function V2Header() {
             if (entry.isIntersecting) {
               if (
                 !best ||
-                Math.abs(entry.boundingClientRect.top) <
-                  Math.abs(best.boundingClientRect.top)
+                Math.abs(entry.boundingClientRect.top) < Math.abs(best.boundingClientRect.top)
               ) {
                 best = entry;
               }
@@ -78,20 +77,14 @@ export function V2Header() {
       ref={headerRef}
       className="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-700 ease-out"
       style={{
-        width: expanded ? 'calc(100% - 2rem)' : 'min(calc(100% - 2rem), 600px)',
-        maxWidth: expanded ? '72rem' : '38rem',
+        width: expanded ? 'calc(100% - 2rem)' : 'min(calc(100% - 2rem), 72rem)',
+        maxWidth: expanded ? '120rem' : '72rem',
         borderRadius: '9999px',
-        backgroundColor: isDark
-          ? 'rgba(10, 10, 10, 0.72)'
-          : 'rgba(247, 245, 242, 0.68)',
-        backdropFilter: 'blur(20px) saturate(1.6)',
-        WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
-        border: isDark
-          ? '1px solid rgba(255,255,255,0.08)'
-          : '1px solid rgba(0,0,0,0.06)',
-        boxShadow: isDark
-          ? '0 4px 30px rgba(0,0,0,0.25)'
-          : '0 4px 24px rgba(0,0,0,0.06)',
+        backgroundColor: isDark ? 'rgba(10, 10, 10, 0.42)' : 'rgba(247, 245, 242, 0.38)',
+        backdropFilter: 'blur(24px) saturate(1.7)',
+        WebkitBackdropFilter: 'blur(24px) saturate(1.7)',
+        border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.04)',
+        boxShadow: isDark ? '0 4px 30px rgba(0,0,0,0.18)' : '0 4px 24px rgba(0,0,0,0.04)',
       }}
     >
       <div className="h-12 flex items-center justify-between px-6">

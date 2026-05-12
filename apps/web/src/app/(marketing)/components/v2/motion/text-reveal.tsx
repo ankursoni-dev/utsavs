@@ -16,6 +16,12 @@ export interface TextRevealProps {
   direction?: 'up' | 'left' | 'right' | 'center';
   triggerOnVisible?: boolean;
   threshold?: number;
+  /**
+   * If provided, TextReveal skips its own IntersectionObserver and uses this
+   * boolean as its visible signal. Use when an ancestor already tracks
+   * in-view state to avoid stacking observers.
+   */
+  parentInView?: boolean;
 }
 
 const hiddenVariants: Record<string, { opacity: number; y?: number; x?: number }> = {
@@ -44,6 +50,10 @@ const visibleVariants: Record<string, { opacity: number; y?: number; x?: number 
  * Word spacing: marginRight is used instead of appending a trailing space
  * inside the inline-block span, because browsers collapse trailing whitespace
  * at the right edge of inline-block elements, causing words to concatenate.
+ *
+ * When `parentInView` is provided, TextReveal skips its own
+ * IntersectionObserver and uses the prop directly. Use this when an ancestor
+ * already tracks in-view state to avoid stacking observers.
  */
 export function TextReveal({
   text,
@@ -55,16 +65,19 @@ export function TextReveal({
   direction = 'up',
   triggerOnVisible = true,
   threshold = 0.2,
+  parentInView,
 }: TextRevealProps) {
   // useReducedMotion() is SSR-safe: returns null on the server and syncs to the
   // actual preference after hydration. Defaulting to false means both server and
   // client initially render the motion branch (no hydration mismatch).
   const prefersReduced = useReducedMotion() ?? false;
 
-  const { ref: scrollRef, isVisible } = useScrollReveal({
-    threshold,
-    triggerOnce: false,
-  });
+  // Always call useScrollReveal unconditionally to satisfy the Rules of Hooks.
+  // When parentInView is provided, we ignore its result and use parentInView instead.
+  const own = useScrollReveal({ threshold });
+  const isVisible = parentInView ?? own.isVisible;
+  // Only attach the scroll ref when this component owns observation.
+  const scrollRef = parentInView === undefined ? own.ref : undefined;
 
   const items = useMemo(() => {
     if (mode === 'character') {
@@ -119,8 +132,7 @@ export function TextReveal({
 
   return (
     <MotionTag
-      // The scroll reveal ref and the framer-motion ref are both applied.
-      ref={scrollRef as React.RefObject<HTMLDivElement>}
+      ref={scrollRef as React.RefObject<HTMLDivElement> | undefined}
       className={cn('whitespace-normal', className)}
       variants={containerVariants}
       initial="hidden"

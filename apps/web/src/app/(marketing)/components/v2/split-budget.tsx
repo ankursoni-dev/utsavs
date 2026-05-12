@@ -225,10 +225,7 @@ function BudgetBarChart({ inView, reduced }: { inView: boolean; reduced: boolean
  */
 export function SplitBudget() {
   const prefersReduced = useReducedMotion() ?? false;
-  const { ref: sectionRef, isVisible: inView } = useScrollReveal({
-    threshold: 0.15,
-    triggerOnce: false,
-  });
+  const { ref: sectionRef, isVisible: inView } = useScrollReveal({ threshold: 0.15 });
 
   // ── Chip variants ──────────────────────────────────────────────────────────
   const chipContainerVariants = {

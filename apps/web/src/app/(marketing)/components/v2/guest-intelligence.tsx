@@ -496,10 +496,7 @@ function TagItem({
  */
 export function GuestIntelligence() {
   const prefersReduced = useReducedMotion() ?? false;
-  const { ref: sectionRef, isVisible: inView } = useScrollReveal({
-    threshold: 0.1,
-    triggerOnce: false,
-  });
+  const { ref: sectionRef, isVisible: inView } = useScrollReveal({ threshold: 0.1 });
 
   // Tag float parameters — use STABLE_TAG_OFFSETS (deterministic, pre-computed) so that
   // server and client render identical markup. Math.random() in a lazy useState initializer

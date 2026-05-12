@@ -182,10 +182,7 @@ function MilestoneRow({ milestone, index, inView, reduced }: MilestoneRowProps) 
  */
 export function BuildingPublic() {
   const prefersReduced = useReducedMotion() ?? false;
-  const { ref: sectionRef, isVisible: inView } = useScrollReveal({
-    threshold: 0.1,
-    triggerOnce: false,
-  });
+  const { ref: sectionRef, isVisible: inView } = useScrollReveal({ threshold: 0.1 });
 
   // ── Reduced-motion static branch ───────────────────────────────────────────
   if (prefersReduced) {

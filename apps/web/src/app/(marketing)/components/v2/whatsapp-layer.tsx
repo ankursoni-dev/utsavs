@@ -53,7 +53,10 @@ function WhatsAppIcon({ size = 18 }: { size?: number }) {
  */
 export function WhatsAppLayer() {
   const prefersReduced = useReducedMotion() ?? false;
-  const { ref, isVisible: inView } = useScrollReveal({ threshold: 0.2 });
+  const { ref, isVisible: inView } = useScrollReveal({
+    threshold: 0.25,
+    rootMargin: '0px 0px -5% 0px',
+  });
 
   return (
     <section
@@ -86,12 +89,14 @@ export function WhatsAppLayer() {
               );
             }
 
+            // Explicit hidden state mirrors initial — eliminates framer-motion
+            // "fallback to initial" jitter when toggling rapidly during scroll.
             return (
               <motion.div
                 key={i}
                 className={bubbleClass}
                 initial={{ opacity: 0, x: fromBot ? -20 : 20 }}
-                animate={inView ? { opacity: 1, x: 0 } : {}}
+                animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: fromBot ? -20 : 20 }}
                 transition={{ delay: 0.2 + i * 0.2, duration: 0.4 }}
               >
                 {msg.text}
@@ -105,7 +110,7 @@ export function WhatsAppLayer() {
             <motion.div
               className="self-start flex items-center gap-1 px-4 py-3 bg-white/10 rounded-2xl mt-1"
               initial={{ opacity: 0 }}
-              animate={inView ? { opacity: 1 } : {}}
+              animate={inView ? { opacity: 1 } : { opacity: 0 }}
               transition={{ delay: 0.2 + MESSAGES.length * 0.2 + 0.3, duration: 0.3 }}
               aria-hidden="true"
             >
@@ -113,7 +118,7 @@ export function WhatsAppLayer() {
                 <motion.span
                   key={d}
                   className="w-1.5 h-1.5 rounded-full bg-white/60"
-                  animate={{ y: [0, -3, 0] }}
+                  animate={inView ? { y: [0, -3, 0] } : false}
                   transition={{
                     duration: 0.6,
                     repeat: Infinity,
@@ -140,12 +145,13 @@ export function WhatsAppLayer() {
               );
             }
 
+            // Explicit hidden state mirrors initial to avoid jitter on replay.
             return (
               <motion.span
                 key={reply}
                 className={chipClass}
                 initial={{ opacity: 0, y: 10 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
+                animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                 transition={{ delay: 0.6 + i * 0.1, duration: 0.3 }}
               >
                 {reply}

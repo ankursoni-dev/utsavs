@@ -104,7 +104,7 @@ function PhotoBox({ photo, index, inView, prefersReduced }: PhotoBoxProps) {
         ['--float-delay' as string]: `${(index * 0.3) % 2.5}s`,
       }}
       initial={{ opacity: 0, x: entry.x, y: entry.y }}
-      animate={inView ? { opacity: 1, x: 0, y: 0 } : {}}
+      animate={inView ? { opacity: 1, x: 0, y: 0 } : { opacity: 0, x: entry.x, y: entry.y }}
       transition={{ type: 'spring', stiffness: 80, damping: 16, delay: 0.1 + index * 0.08 }}
     >
       <CameraIcon />
@@ -134,7 +134,11 @@ export function MemoriesGallery() {
   const { ref, isVisible: inView } = useScrollReveal({ threshold: 0.15 });
 
   return (
-    <section data-nav-theme="light" ref={ref} className="relative z-10 py-12 md:py-20 px-6 bg-bg-alt">
+    <section
+      data-nav-theme="light"
+      ref={ref}
+      className="relative z-10 py-12 md:py-20 px-6 bg-bg-alt"
+    >
       <div className="mx-auto max-w-6xl">
         {/* Heading */}
         <div className="text-center mb-8 md:mb-12">
@@ -148,6 +152,7 @@ export function MemoriesGallery() {
                 mode="word"
                 direction="up"
                 as="span"
+                parentInView={inView}
               />
             )}
           </h2>

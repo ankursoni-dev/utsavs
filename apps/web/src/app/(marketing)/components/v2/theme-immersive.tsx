@@ -287,10 +287,7 @@ export function ThemeImmersive() {
   const [selected, setSelected] = useState<ThemeName>(THEME_NAMES[0]);
   const [prevSelected, setPrevSelected] = useState<ThemeName | null>(null);
 
-  const { ref: sectionRef, isVisible: inView } = useScrollReveal({
-    threshold: 0.05,
-    triggerOnce: false,
-  });
+  const { ref: sectionRef, isVisible: inView } = useScrollReveal({ threshold: 0.05 });
 
   function handleSelect(name: ThemeName) {
     if (name === selected) return;

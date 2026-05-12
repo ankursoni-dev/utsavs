@@ -180,10 +180,7 @@ function VendorCard({ inView, reduced }: { inView: boolean; reduced: boolean }) 
  */
 export function SplitVendor() {
   const prefersReduced = useReducedMotion() ?? false;
-  const { ref: sectionRef, isVisible: inView } = useScrollReveal({
-    threshold: 0.1,
-    triggerOnce: false,
-  });
+  const { ref: sectionRef, isVisible: inView } = useScrollReveal({ threshold: 0.1 });
 
   const chipContainerVariants = {
     hidden: {},

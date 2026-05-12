@@ -23,6 +23,12 @@ export interface StaggerChildrenProps {
    * manage their own motion variants (opt-in to stagger cascade).
    */
   wrapChildren?: boolean;
+  /**
+   * If provided, StaggerChildren skips its own IntersectionObserver and uses
+   * this boolean as its visible signal. Use when an ancestor already tracks
+   * in-view state to avoid stacking observers.
+   */
+  parentInView?: boolean;
 }
 
 const itemHidden: Record<string, { opacity: number; y?: number; x?: number }> = {
@@ -62,13 +68,16 @@ export function StaggerChildren({
   delayChildren = 0,
   as = 'div',
   wrapChildren = true,
+  parentInView,
 }: StaggerChildrenProps) {
   // useReducedMotion() is SSR-safe: returns null on the server and syncs to the
   // actual preference after hydration. Defaulting to false means both server and
   // client initially render the motion branch (no hydration mismatch).
   const prefersReduced = useReducedMotion() ?? false;
 
-  const { ref, isVisible } = useScrollReveal({ threshold, triggerOnce: false });
+  const own = useScrollReveal({ threshold });
+  const isVisible = parentInView ?? own.isVisible;
+  const containerRef = parentInView === undefined ? own.ref : undefined;
 
   if (prefersReduced) {
     const StaticTag = as as ElementType;
@@ -99,7 +108,7 @@ export function StaggerChildren({
 
   return (
     <MotionTag
-      ref={ref as React.RefObject<HTMLDivElement>}
+      ref={containerRef as React.RefObject<HTMLDivElement> | undefined}
       className={cn(className)}
       variants={containerVariants}
       initial="hidden"

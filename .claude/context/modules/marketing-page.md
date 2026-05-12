@@ -35,28 +35,29 @@ Landing page at `/` (route group `(marketing)`): cinematic v2 acquisition page w
 - **`V2MobileNav`** (client) — Hamburger + portal-rendered overlay (createPortal to document.body). Mount-guarded via useSyncExternalStore. Body scroll lock when open.
 
 **Motion Primitives Library** (`apps/web/src/app/(marketing)/components/v2/motion/`):
-1. **`useScrollReveal(options)`** — IntersectionObserver hook (generic over HTMLElement). Options: `threshold`, `delay`, `triggerOnce`, `rootMargin`. Returns `{ ref, isVisible }`. Respects `useReducedMotion()`.
+1. **`useScrollReveal(options)`** — IntersectionObserver hook (generic over HTMLElement). Options: `threshold`, `delay`, `triggerOnce` (default **false** — animations replay on re-entry; pass `true` to latch on first reveal), `rootMargin` (default **'0px 0px -10% 0px'** — triggers slightly before fully visible). Returns `{ ref, isVisible }`. Respects `useReducedMotion()`. Listens to window `reveal:rearm` CustomEvent for bfcache re-arming (dispatched by PageRestoreGuard).
 2. **`useCountUp(value, options)`** — Animated count-up via framer-motion. Handles integers, ranges, currency with regex parser. Generic over HTMLElement. Respects `useReducedMotion()`.
 3. **`useParallax(options)`** — Scroll-linked translateY via framer-motion useScroll/useTransform. Does NOT enforce reduced-motion (consumer guards).
-4. **`TextReveal`** — Word/character/center directional reveal via framer-motion variants. Props: `text`, `as`, `mode` ('word'|'character'), `stagger`, `delay`, `direction` ('up'|'left'|'right'|'center'), `triggerOnVisible`, `threshold`.
+4. **`TextReveal`** — Word/character/center directional reveal via framer-motion variants. Props: `text`, `as`, `mode` ('word'|'character'), `stagger`, `delay`, `direction` ('up'|'left'|'right'|'center'), `triggerOnVisible`, `threshold`, `parentInView` (optional — when provided, skips creating own IntersectionObserver and uses parent's in-view boolean instead to avoid stacking observers).
 5. **`MagneticHover`** — Cursor-following spring displacement (max 8px).
-6. **`StaggerChildren`** — Directional staggered reveal wrapper.
+6. **`StaggerChildren`** — Directional staggered reveal wrapper. Props: `parentInView` (optional — same as TextReveal).
 7. **`FloatingElement`** — CSS @keyframes float-y ambient float (zero JS cost). Respects `prefers-reduced-motion`.
 8. **`ParticleField`** — Leaves/confetti/dots variants with stable random seed via useEffect (NOT useMemo per react-hooks purity rule). Cleanup on unmount.
 9. **`AmbientLayer`** — Fixed full-viewport layer with two drifting radial-gradient orbs (brand-primary 3%, champagne 2%) parallaxing with scroll. Mounted once at top of page behind all sections (`z-0`). Respects `useReducedMotion()`.
-10. **`SectionBridge`** — Pure Server Component markup. Gradient transition div between sections, props: `fromColor`, `toColor`, `height`. No motion; renders thin linear-gradient strip.
+10. **`PageRestoreGuard`** — Client Component mounted in `layout.tsx` inside `BrandProvider`. Single global `pageshow` listener. On `e.persisted === true` (bfcache restore), forces layout flush and dispatches window `reveal:rearm` CustomEvent to re-arm all `useScrollReveal` instances.
+11. **`SectionBridge`** — Pure Server Component markup. Gradient transition div between sections, props: `fromColor`, `toColor`, `height`. No motion; renders thin linear-gradient strip.
 
 **Section Components:**
-- **`HeroCinematic`** — Dark hero with 3-layer atmospheric gradient depth, golden particles, TextReveal word-by-word headline, scroll chevron cue. Typography breathing + CTA glow pulse persistent animation.
+- **`HeroCinematic`** — Dark hero with 3-layer atmospheric gradient depth, golden particles, TextReveal word-by-word headline, scroll chevron cue. Entrance choreography compressed to ~1.5s total. Four perpetual loops (drifting fog, headline breathing, primary CTA glow pulse, chevron bounce) pause when hero scrolls out of view via framer-motion `useInView`.
 - **`CommandDashboard`** — Browser frame container, metric cards (Budget/Guest/Vendor), timeline strip, sample shagun/invite cards. Desktop: frame visible; mobile: stacked content.
 - **`SplitBudget`** — Animated bar chart (5 categories, 0→pct% fill) RIGHT; text content LEFT.
 - **`SplitVendor`** — Vendor risk table (row stagger on mount, risk-dot pulse) LEFT; text RIGHT. Layout FLIPped on mobile via `md:order-*`.
 - **`WhatsAppLayer`** — Dark strip with 3 mock WhatsApp chat bubbles (sent/received directional fade-slide), typing indicator dots (bounce loop), quick-reply chips. Tagline callout.
 - **`GuestIntelligence`** — Clip-reveal stats strip, spring-scatter tag cloud (stable seed, NOT Math.random), SVG donut chart with arc-draw entrance, rotating RSVP feed (3s setInterval).
-- **`MemoriesGallery`** — Warm bg-bg-alt section. 7 photo boxes (3 gradient tints: champagne/rose/beige) in responsive 3/4-col grid; one featured 2-row span. Spring scatter entrance, ambient float per box, feature chip row.
+- **`MemoriesGallery`** — Warm bg-bg-alt section. 7 photo boxes (3 gradient tints: champagne/rose/beige) in responsive 3/4-col grid; one featured 2-row span. Spring scatter entrance (uses section-level IntersectionObserver, not per-box), ambient float per box, feature chip row.
 - **`ThemeImmersive`** — Full-bleed theme gradient (2-layer opacity crossfade for tween workaround), 3D rotateY card flip on selection, 6 theme swatches. Uses opacity+scale entrance (replaced clip-path to avoid permanent-invisible bug).
 - **`MetricsRibbon`** — Dark ribbon section with opacity+scale entrance (replaced clip-reveal-ltr), 3 `useCountUp` stats (extracted to `StatBlockAnimated`), golden ParticleField.
-- **`RelationshipLedger`** — Dark mysterious teaser. 11-node SVG constellation graph with 16 hard-coded edges. Distance-from-center stagger reveal. "Coming 2026" tagline.
+- **`RelationshipLedger`** — Dark mysterious teaser. 11-node SVG constellation graph with 16 hard-coded edges. Distance-from-center stagger reveal driven by the section's own `useScrollReveal`; headline `TextReveal` uses `parentInView` to skip a redundant observer. "Coming 2026" tagline.
 - **`BuildingPublic`** — Vertical milestone timeline with line-draw animation. Node states: checkmark (shipped), pulse-ring (in-progress), coming-soon badge.
 - **`CtaGravity`** — Full-viewport dark CTA. TextReveal headline (center direction), stat counter strip (342 guests, ₹22L lakhs, 12 vendors), faint dashboard silhouette background (6% opacity). Perpetual radial gradient pulse (6-12% opacity range), UI-only waitlist form, conditional confetti ParticleField on submit.
 
@@ -66,6 +67,8 @@ Landing page at `/` (route group `(marketing)`): cinematic v2 acquisition page w
 - **No JSX-variable double-mount**: each section uses single render path with responsive Tailwind for mobile/desktop differences (avoids hydration/hook bugs).
 - **Hydration safety**: all `typeof window && matchMedia(...)` replaced with framer-motion `useReducedMotion()` hook. No Math.random in lazy useState initializers; stable seed offsets for entrance animations (MemoriesGallery STABLE_ENTRY array, RelationshipLedger fixed node/edge layout).
 - **`useCountUp` parser**: handles integers, ranges, currency suffixes — but animates only leading numbers (e.g., "₹15-80L" animates "15" only; suffix static). Used where numeric part is clean; static text fallback elsewhere.
+- **Bfcache restore protocol**: Single dispatcher (PageRestoreGuard in layout.tsx) listens for browser `pageshow` events. On `e.persisted === true`, dispatches window `reveal:rearm` CustomEvent. All `useScrollReveal` instances listen for this event and re-arm their IntersectionObserver state. This ensures scroll-triggered animations re-play correctly when user navigates back to the page via browser back button.
+- **Stacked observer avoidance**: Components that use `parentInView` prop (TextReveal, StaggerChildren in hero and galleries) skip creating their own IntersectionObserver and instead use the parent section's visibility state. Reduces browser observer count and improves scroll performance.
 
 ## Brand system
 
@@ -73,6 +76,7 @@ Landing page at `/` (route group `(marketing)`): cinematic v2 acquisition page w
 - **`BrandSwitcher`** — Relocated to `apps/web/src/components/providers/brand-switcher.tsx`. Dev-only floating widget; returns `null` in production. Allows runtime theme switching during development.
 - **`NEXT_PUBLIC_BRAND` env var** — Values: `plum | wine | sapphire | teal`. Evaluated at build time. Default: `plum`. Next.js inlines the value, so brand is a compile-time constant.
 - **Theme data** — THEMES map + THEME_NAMES array imported from `@/lib/themes` (re-exported from `@repo/shared-types` shared package).
+- **Font preload** — Only Marcellus (display font) is auto-preloaded in `apps/web/src/app/layout.tsx`. Inter and JetBrains_Mono carry `preload: false` to optimize initial page load.
 
 ## Navigation anchors
 
